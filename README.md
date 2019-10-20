@@ -6,7 +6,7 @@ The results are obviously not as good as the SRGAN, since this is a "weaker" gen
 # Code
 Code is written to be clean and readable. And is written in the tensorflow 2.0 style. Functions are decorated with tf.function where ever necessary.
 
-# Pretrained model
+# Pre-trained Model
 A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 12 inverted residual blocks, with 24 filters in every layer of the generator. Upsampling is done via phase shifts AKA pixel shuffle. During training pixel shuffle upsampling gave checkerboard artifacts. Adding MSE as a loss reduced them. I tried ICNR initialization, but that didn't seem to help as the artifacts would appear near the end.
 
 # Training curves because why not?
