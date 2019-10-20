@@ -52,7 +52,7 @@ model = keras.model.Model(inputs, outputs)
 ```
 
 # Contributing
-If you have ideas on improving the model performance, adding metrics, or any other changes, please make a pull request or open an issue. I'd be happy to accept any contributions.
+If you have ideas on improving model performance, adding metrics, or any other changes, please make a pull request or open an issue. I'd be happy to accept any contributions.
 
 # TODOs
 1. Add metrics.
