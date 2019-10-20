@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from dataloader import DataLoader
-from model import MobileSRGAN
+from model import FastSRGAN
 import tensorflow as tf
 import os
 
@@ -46,7 +46,7 @@ def pretrain_generator(model, dataset, writer):
     """
     with writer.as_default():
         iteration = 0
-        for epoch in range(20):
+        for epoch in range(2):
             for x, y in dataset:
                 loss = pretrain_step(model, x, y)
                 if iteration % 20 == 0:
@@ -66,7 +66,7 @@ def train_step(model, x, y):
     Returns:
         d_loss: The mean loss of the discriminator.
     """
-
+    # Label smoothing for better gradient flow
     valid = tf.ones((x.shape[0], 1)) - tf.random.uniform((x.shape[0], 1)) * 0.1
     fake = tf.ones((x.shape[0], 1)) * tf.random.uniform((x.shape[0], 1)) * 0.1
 
@@ -144,7 +144,7 @@ def main():
 
     with tf.device('GPU:1'):
         # Initialize the GAN object.
-        gan = MobileSRGAN(args)
+        gan = FastSRGAN(args)
 
         # Define the directory for saving pretrainig loss tensorboard summary.
         pretrain_summary_writer = tf.summary.create_file_writer('logs/pretrain')

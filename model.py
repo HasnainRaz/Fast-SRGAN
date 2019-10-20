@@ -2,8 +2,8 @@ from tensorflow import keras
 import tensorflow as tf
 
 
-class MobileSRGAN(object):
-    """MobileNet SRGAN for fast super resolution."""
+class FastSRGAN(object):
+    """SRGAN for fast super resolution."""
 
     def __init__(self, args):
         """
@@ -87,7 +87,7 @@ class MobileSRGAN(object):
 
     def build_generator(self):
         """Build the generator that will do the Super Resolution task.
-        Based on the mobilenet design taken from Galteri et al."""
+        Based on the Mobilenet design. Idea from Galteri et al."""
 
         def _make_divisible(v, divisor, min_value=None):
             if min_value is None:
@@ -204,7 +204,7 @@ class MobileSRGAN(object):
         return keras.models.Model(img_lr, gen_hr)
 
     def build_discriminator(self):
-        """Builds a discriminator network based on the Patch-GAN design."""
+        """Builds a discriminator network based on the SRGAN design."""
 
         def d_block(layer_input, filters, strides=1, bn=True):
             """Discriminator layer block.
