@@ -1,17 +1,16 @@
 # Fast-SRGAN
-The goal of this repository is to enable real time super resolution for upsampling low resolution videos. Currently, the design follows the [SR-GAN](https://arxiv.org/pdf/1609.04802.pdf) architecture. But instead of residual blocks, inverted residual blocks are employed from the MobileNet for parameter efficiency and fast operation. This idea is somewhat inspired by [Real time image enhancement GANs](http://www.micc.unifi.it/seidenari/wp-content/papercite-data/pdf/caip_2019.pdf).
+The goal of this repository is to enable real time super resolution for upsampling low resolution videos. Currently, the design follows the [SR-GAN](https://arxiv.org/pdf/1609.04802.pdf) architecture. But instead of residual blocks, inverted residual blocks are employed for parameter efficiency and fast operation. This idea is somewhat inspired by [Real time image enhancement GANs](http://www.micc.unifi.it/seidenari/wp-content/papercite-data/pdf/caip_2019.pdf).
+
+The training setup looks like the following diagram:
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/4294680/67164120-22157480-f377-11e9-87c1-5b6acace0e47.png">
 </p>
 
-The results are obviously not as good as the SRGAN, since this is a "weaker" generator. But it is faster. Benchmarks coming soon. Any ideas on impoving it/pull requests are welcome!
-
-# Code
-Code is written to be clean and readable. And is written in the tensorflow 2.0 style. Functions are decorated with tf.function where ever necessary.
+The results are obviously not as good as the SRGAN, since this is a "weaker" generator. But it is faster. Benchmarks are coming soon.
 
 # Pre-trained Model
-A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 12 inverted residual blocks, with 24 filters in every layer of the generator. Upsampling is done via phase shifts AKA pixel shuffle. During training pixel shuffle upsampling gave checkerboard artifacts. Adding MSE as a loss reduced them. I tried ICNR initialization, but that didn't seem to help as the artifacts would appear near the end.
+A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 12 inverted residual blocks, with 24 filters in every layer of the generator. Upsampling is done via phase shifts AKA pixel shuffle. During training, pixel shuffle upsampling gave checkerboard artifacts. Adding MSE as a loss reduced them.
 
 # Training curves because why not?
 <p align="center">
@@ -19,11 +18,19 @@ A pretrained generator model on the DIV2k dataset is provided in the 'models' di
   <img src="https://user-images.githubusercontent.com/4294680/67163317-ba0e6080-f36d-11e9-936b-3579f4bb5d45.png"> <img src="https://user-images.githubusercontent.com/4294680/67163321-cabed680-f36d-11e9-9d0f-bae077e99b20.png">
 </p>
 
+# Training
+To train, simply execute the following command in your terminal:
+```bash
+python main.py --image_dir 'path/to/image/directory' --hr_image_size 128 --lr 1e-4 --save_iter 200 --epochs 10 --batch_size 14
+```
+Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the 'logs' directory that will created when you start training.
+
 # Training Speed
-On a GTX 1080 with a batch size of 14 and image size of 128, the model trains in 9.5 hours for 170,000 iterations. This is achieved mainly by the efficient tensorflow tf Data pipeline. It keeps the utilization at a constant 95%+.
+On a GTX 1080 with a batch size of 14 and image size of 128, the model trains in 9.5 hours for 170,000 iterations. This is achieved mainly by the efficient tensorflow tf data pipeline. It keeps the GPU utilization at a constant 95%+.
 
 # Samples
-Following are some results from the provided trained model. Left shows the 4x downsampled image AFTER it has been upsampled 4x by bicubic interpolation. Middle is the output of the model. Right is the actual high res image. The generated samples appear softer. Maybe a side effect of using the MSE loss.
+Following are some results from the provided trained model. Left shows the 4x upsampled via bicubic interpolation, low resolution image. Middle is the output of the model. Right is the actual high resolution image. The generated samples appear softer. Maybe a side effect of using the MSE loss. Loss weights need to be tuned possibly.
+
 <p align="center">
   256x256 to 1024x1024 upsampling:
   <img src="https://user-images.githubusercontent.com/4294680/67163689-4fabef00-f372-11e9-9a39-87552792cd70.png"> 
@@ -37,6 +44,7 @@ Following are some results from the provided trained model. Left shows the 4x do
 
 # Changing Input Size
 The provided model was trained on 128x128 inputs, but to run it on inputs of arbitrary size, you'll have to change the input shape like so:
+
 ```python
 from tensorflow import keras
 
