@@ -1,6 +1,10 @@
 # Fast-SRGAN
 The goal of this repository is to enable real time super resolution for upsampling low resolution videos. Currently, the design follows the [SR-GAN](https://arxiv.org/pdf/1609.04802.pdf) architecture. But instead of residual blocks, inverted residual blocks are employed from the MobileNet for parameter efficiency and fast operation. This idea is somewhat inspired by [Real time image enhancement GANs](http://www.micc.unifi.it/seidenari/wp-content/papercite-data/pdf/caip_2019.pdf).
 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/4294680/67164120-22157480-f377-11e9-87c1-5b6acace0e47.png">
+</p>
+
 The results are obviously not as good as the SRGAN, since this is a "weaker" generator. But it is faster. Benchmarks coming soon. Any ideas on impoving it/pull requests are welcome!
 
 # Code
