@@ -19,7 +19,7 @@ A pretrained generator model on the DIV2k dataset is provided in the 'models' di
 On a GTX 1080 with a batch size of 14 and image size of 128, the model trains in 9.5 hours for 170,000 iterations. This is achieved mainly by the efficient tensorflow tf Data pipeline. It keeps the utilization at a constant 95%+.
 
 # Samples
-Following are some results from the provided trained model. Left shows the 4x downsampled image AFTER it has been upsampled 4x by bicubic interpolation. Middle is the output of the model. Right is the actual high res image.
+Following are some results from the provided trained model. Left shows the 4x downsampled image AFTER it has been upsampled 4x by bicubic interpolation. Middle is the output of the model. Right is the actual high res image. The generated samples appear softer. Maybe a side effect of using the MSE loss.
 <p align="center">
   256x256 to 1024x1024 upsampling:
   <img src="https://user-images.githubusercontent.com/4294680/67163689-4fabef00-f372-11e9-9a39-87552792cd70.png"> 
