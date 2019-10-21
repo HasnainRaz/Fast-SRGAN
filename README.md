@@ -10,7 +10,7 @@ The training setup looks like the following diagram:
 The results are obviously not as good as the SRGAN, since this is a "weaker" generator. But it is faster. Benchmarks are coming soon.
 
 # Pre-trained Model
-A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 12 inverted residual blocks, with 24 filters in every layer of the generator. Upsampling is done via phase shifts AKA pixel shuffle. During training, pixel shuffle upsampling gave checkerboard artifacts. Adding MSE as a loss reduced them.
+A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 12 inverted residual blocks, with 24 filters in every layer of the generator. Upsampling is done via phase shifts AKA pixel shuffle. During training, pixel shuffle upsampling gave checkerboard artifacts. Adding MSE as a loss reduced them. So if you're wondering why there's mse loss in there, that's why.
 
 # Training curves because why not?
 <p align="center">
@@ -29,16 +29,16 @@ Model checkpoints and training summaries are saved in tensorboard. To monitor tr
 On a GTX 1080 with a batch size of 14 and image size of 128, the model trains in 9.5 hours for 170,000 iterations. This is achieved mainly by the efficient tensorflow tf data pipeline. It keeps the GPU utilization at a constant 95%+.
 
 # Samples
-Following are some results from the provided trained model. Left shows the 4x upsampled via bicubic interpolation, low resolution image. Middle is the output of the model. Right is the actual high resolution image. The generated samples appear softer. Maybe a side effect of using the MSE loss. Loss weights need to be tuned possibly.
+Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image. The generated samples appear softer. Maybe a side effect of using the MSE loss. Loss weights need to be tuned possibly.
 
 <p align="center">
-  256x256 to 1024x1024 upsampling:
+  <b>256x256 to 1024x1024 Upsampling</b>
   <img src="https://user-images.githubusercontent.com/4294680/67163689-4fabef00-f372-11e9-9a39-87552792cd70.png"> 
-  128x128 to 512x512 upsampling:
+  <b>128x128 to 512x512 Upsampling</b>
   <img src="https://user-images.githubusercontent.com/4294680/67163721-b03b2c00-f372-11e9-84d9-9774f3c52657.png">
-  64x64 to 256x256 upsampling:
+  <b>64x64 to 256x256 Upsampling</b>
   <img src="https://user-images.githubusercontent.com/4294680/67163743-de207080-f372-11e9-843f-87b9a6aba632.png">
-  32x32 to 128x128 upsampling:
+  <b>32x32 to 128x128 Upsampling</b>
   <img src="https://user-images.githubusercontent.com/4294680/67163760-04461080-f373-11e9-902d-89dc3acb6e7b.png">
 </p>
 
