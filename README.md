@@ -37,7 +37,7 @@ Following are some results from the provided trained model. Left shows the low r
   <b>384x384 to 1536x1536 Upsampling</b>
   <img src="https://user-images.githubusercontent.com/4294680/67642055-4f7a9900-f908-11e9-93d7-5efc902bd81c.png"> 
   <b>256x256 to 1024x1024 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67642015-d0856080-f907-11e9-9ff0-0775a8f1fdef.png">
+  <img src="https://user-images.githubusercontent.com/4294680/67642086-8fda1700-f908-11e9-8428-8a69ea86dedb.png">
   <b>128x128 to 512x512 Upsampling</b>
   <img src="https://user-images.githubusercontent.com/4294680/67641979-5ead1700-f907-11e9-866c-b72d2e1dec8a.png">
 </p>
