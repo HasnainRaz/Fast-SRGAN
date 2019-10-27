@@ -46,9 +46,9 @@ Following are some results from the provided trained model. Left shows the low r
 Upsampling HQ images 4x as a check to see the image is not destroyed (since the network is trained on low quality, it should also upsample high quality images while preserving their quality).
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/4294680/67641859-248f4580-f906-11e9-9d56-d12225665ed0.png">
-  <img src="https://user-images.githubusercontent.com/4294680/67641862-29ec9000-f906-11e9-9098-b05c3770d294.png">
-  <img src="https://user-images.githubusercontent.com/4294680/67641863-2ce78080-f906-11e9-8fa1-9dc86c2b8f95.png">
+  <img src="https://user-images.githubusercontent.com/4294680/67641915-b434f400-f906-11e9-88d1-44a7f2a80923.png">
+  <img src="https://user-images.githubusercontent.com/4294680/67641917-b8611180-f906-11e9-8539-81f17d69653f.png">
+  <img src="https://user-images.githubusercontent.com/4294680/67641946-fbbb8000-f906-11e9-95af-2873eb01e2ec.png">
 </p>
 
 # Changing Input Size
