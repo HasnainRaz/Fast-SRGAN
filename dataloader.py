@@ -87,7 +87,6 @@ class DataLoader(object):
             low_res: The tf tensor of the low res image, rescaled.
             high_res: the tf tensor of the high res image, rescaled.
         """
-        low_res = low_res * 2.0 - 1.0
         high_res = high_res * 2.0 - 1.0
 
         return low_res, high_res

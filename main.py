@@ -5,11 +5,10 @@ import tensorflow as tf
 import os
 
 parser = ArgumentParser()
-parser.add_argument('--image_dir', default='/home/wattx/Downloads/experimental/div2k', type=str,
-                    help='Path to high resolution image directory.')
-parser.add_argument('--batch_size', default=12, type=int, help='Batch size for training.')
-parser.add_argument('--epochs', default=3000, type=int, help='Number of epochs for training')
-parser.add_argument('--hr_size', default=128, type=int, help='Low resolution input size.')
+parser.add_argument('--image_dir', type=str, help='Path to high resolution image directory.')
+parser.add_argument('--batch_size', default=8, type=int, help='Batch size for training.')
+parser.add_argument('--epochs', default=1, type=int, help='Number of epochs for training')
+parser.add_argument('--hr_size', default=384, type=int, help='Low resolution input size.')
 parser.add_argument('--lr', default=1e-4, type=float, help='Learning rate for optimizers.')
 parser.add_argument('--save_iter', default=200, type=int,
                     help='The number of iterations to save the tensorboard summaries and models.')
@@ -35,8 +34,7 @@ def pretrain_step(model, x, y):
 
 
 def pretrain_generator(model, dataset, writer):
-    """Function that pretrains the generator slightly, so that it can keep up
-    with the discriminator at the start.
+    """Function that pretrains the generator slightly, to avoid local minima.
     Args:
         model: The keras model to train.
         dataset: A tf dataset object of low and high res images to pretrain over.
@@ -46,7 +44,7 @@ def pretrain_generator(model, dataset, writer):
     """
     with writer.as_default():
         iteration = 0
-        for epoch in range(2):
+        for _ in range(1):
             for x, y in dataset:
                 loss = pretrain_step(model, x, y)
                 if iteration % 20 == 0:
@@ -62,13 +60,13 @@ def train_step(model, x, y):
         model: An object that contains a tf keras compiled discriminator model.
         x: The low resolution input image.
         y: The desired high resolution output image.
-        
+
     Returns:
         d_loss: The mean loss of the discriminator.
     """
     # Label smoothing for better gradient flow
-    valid = tf.ones((x.shape[0], 1)) - tf.random.uniform((x.shape[0], 1)) * 0.1
-    fake = tf.ones((x.shape[0], 1)) * tf.random.uniform((x.shape[0], 1)) * 0.1
+    valid = tf.ones((x.shape[0],) + model.disc_patch)
+    fake = tf.zeros((x.shape[0],) + model.disc_patch)
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         # From low res. image generate high res. version
@@ -87,7 +85,7 @@ def train_step(model, x, y):
         # Discriminator loss
         valid_loss = tf.keras.losses.BinaryCrossentropy()(valid, valid_prediction)
         fake_loss = tf.keras.losses.BinaryCrossentropy()(fake, fake_prediction)
-        d_loss = tf.divide(tf.add(valid_loss, fake_loss), 2)
+        d_loss = tf.add(valid_loss, fake_loss)
 
     # Backprop on Generator
     gen_grads = gen_tape.gradient(perceptual_loss, model.generator.trainable_variables)
@@ -121,7 +119,7 @@ def train(model, dataset, log_iter, writer):
                 tf.summary.scalar('Content Loss', content_loss, step=model.iterations)
                 tf.summary.scalar('MSE Loss', mse_loss, step=model.iterations)
                 tf.summary.scalar('Discriminator Loss', disc_loss, step=model.iterations)
-                tf.summary.image('Low Res', tf.cast(255 * (x + 1.0) / 2.0, tf.uint8), step=model.iterations)
+                tf.summary.image('Low Res', tf.cast(255 * x, tf.uint8), step=model.iterations)
                 tf.summary.image('High Res', tf.cast(255 * (y + 1.0) / 2.0, tf.uint8), step=model.iterations)
                 tf.summary.image('Generated', tf.cast(255 * (model.generator.predict(x) + 1.0) / 2.0, tf.uint8),
                                  step=model.iterations)
@@ -142,22 +140,21 @@ def main():
     # Create the tensorflow dataset.
     ds = DataLoader(args.image_dir, args.hr_size).dataset(args.batch_size)
 
-    with tf.device('GPU:1'):
-        # Initialize the GAN object.
-        gan = FastSRGAN(args)
+    # Initialize the GAN object.
+    gan = FastSRGAN(args)
 
-        # Define the directory for saving pretrainig loss tensorboard summary.
-        pretrain_summary_writer = tf.summary.create_file_writer('logs/pretrain')
+    # Define the directory for saving pretrainig loss tensorboard summary.
+    pretrain_summary_writer = tf.summary.create_file_writer('logs/pretrain')
 
-        # Run pre-training.
-        pretrain_generator(gan, ds, pretrain_summary_writer)
+    # Run pre-training.
+    pretrain_generator(gan, ds, pretrain_summary_writer)
 
-        # Define the directory for saving the SRGAN training tensorbaord summary.
-        train_summary_writer = tf.summary.create_file_writer('logs/train')
+    # Define the directory for saving the SRGAN training tensorbaord summary.
+    train_summary_writer = tf.summary.create_file_writer('logs/train')
 
-        # Run training.
-        for epoch in range(args.epochs):
-            train(gan, ds, args.save_iter, train_summary_writer)
+    # Run training.
+    for _ in range(args.epochs):
+        train(gan, ds, args.save_iter, train_summary_writer)
 
 
 if __name__ == '__main__':

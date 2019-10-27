@@ -22,7 +22,7 @@ class FastSRGAN(object):
         self.iterations = 0
 
         # Number of inverted residual blocks in the mobilenet generator
-        self.n_residual_blocks = 12
+        self.n_residual_blocks = 6
 
         # Define a learning rate decay schedule.
         self.gen_schedule = keras.optimizers.schedules.ExponentialDecay(
@@ -53,7 +53,7 @@ class FastSRGAN(object):
 
         # Number of filters in the first layer of G and D
         self.gf = 32  # Realtime Image Enhancement GAN Galteri et al.
-        self.df = 64
+        self.df = 32
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -90,13 +90,13 @@ class FastSRGAN(object):
         Based on the Mobilenet design. Idea from Galteri et al."""
 
         def _make_divisible(v, divisor, min_value=None):
-            if min_value is None:
-                min_value = divisor
-            new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-            # Make sure that round down does not go down by more than 10%.
-            if new_v < 0.9 * v:
-                new_v += divisor
-            return new_v
+                if min_value is None:
+                    min_value = divisor
+                new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+                # Make sure that round down does not go down by more than 10%.
+                if new_v < 0.9 * v:
+                    new_v += divisor
+                return new_v
 
         def residual_block(inputs, filters, block_id, expansion=6, stride=1, alpha=1.0):
             """Inverted Residual block that uses depth wise convolutions for parameter efficiency.
@@ -164,15 +164,16 @@ class FastSRGAN(object):
                 return keras.layers.Add(name=prefix + 'add')([inputs, x])
             return x
 
-        def deconv2d(layer_input):
+        def deconv2d(layer_input, filters):
             """Upsampling layer to increase height and width of the input.
             Uses PixelShuffle for upsampling.
             Args:
                 layer_input: The input tensor to upsample.
+                filters: Numbers of expansion filters.
             Returns:
                 u: Upsampled input by a factor of 2.
             """
-            u = keras.layers.Conv2D(self.gf * 2 ** 2, kernel_size=3, strides=1, padding='same')(layer_input)
+            u = keras.layers.Conv2D(filters, kernel_size=3, strides=1, padding='same')(layer_input)
             u = tf.nn.depth_to_space(u, 2)
             u = keras.layers.PReLU(shared_axes=[1, 2])(u)
             return u
@@ -181,7 +182,8 @@ class FastSRGAN(object):
         img_lr = keras.Input(shape=self.lr_shape)
 
         # Pre-residual block
-        c1 = keras.layers.Conv2D(self.gf, kernel_size=9, strides=1, padding='same')(img_lr)
+        c1 = keras.layers.Conv2D(self.gf, kernel_size=3, strides=1, padding='same')(img_lr)
+        c1 = keras.layers.BatchNormalization()(c1)
         c1 = keras.layers.PReLU(shared_axes=[1, 2])(c1)
 
         # Propogate through residual blocks
@@ -191,15 +193,15 @@ class FastSRGAN(object):
 
         # Post-residual block
         c2 = keras.layers.Conv2D(self.gf, kernel_size=3, strides=1, padding='same')(r)
-        c2 = keras.layers.BatchNormalization(momentum=0.8)(c2)
+        c2 = keras.layers.BatchNormalization()(c2)
         c2 = keras.layers.Add()([c2, c1])
-
+        
         # Upsampling
-        u1 = deconv2d(c2)
-        u2 = deconv2d(u1)
+        u1 = deconv2d(c2, self.gf * 4)
+        u2 = deconv2d(u1, self.gf * 4)
 
         # Generate high resolution output
-        gen_hr = keras.layers.Conv2D(3, kernel_size=9, strides=1, padding='same', activation='tanh')(u2)
+        gen_hr = keras.layers.Conv2D(3, kernel_size=3, strides=1, padding='same', activation='tanh')(u2)
 
         return keras.models.Model(img_lr, gen_hr)
 
@@ -226,17 +228,13 @@ class FastSRGAN(object):
 
         d1 = d_block(d0, self.df, bn=False)
         d2 = d_block(d1, self.df, strides=2)
-        d3 = d_block(d2, self.df * 2)
-        d4 = d_block(d3, self.df * 2, strides=2)
-        d5 = d_block(d4, self.df * 4)
-        d6 = d_block(d5, self.df * 4, strides=2)
-        d7 = d_block(d6, self.df * 8)
-        d8 = d_block(d7, self.df * 8, strides=2)
+        d3 = d_block(d2, self.df)
+        d4 = d_block(d3, self.df, strides=2)
+        d5 = d_block(d4, self.df * 2)
+        d6 = d_block(d5, self.df * 2, strides=2)
+        d7 = d_block(d6, self.df * 2)
+        d8 = d_block(d7, self.df * 2, strides=2)
 
-        d9 = keras.layers.Flatten()(d8)
-        d10 = keras.layers.Dense(1024)(d9)
-        d11 = keras.layers.LeakyReLU(alpha=0.2)(d10)
-
-        validity = keras.layers.Dense(1, activation='sigmoid')(d11)
+        validity = keras.layers.Conv2D(1, kernel_size=1, strides=1, activation='sigmoid', padding='same')(d8)
 
         return keras.models.Model(d0, validity)
