@@ -8,7 +8,7 @@ The training setup looks like the following diagram:
 </p>
 
 # Speed Benchmarks
-The following runtimes/fps are obtained by averaging runtimes over 800 frames.
+The following runtimes/fps are obtained by averaging runtimes over 800 frames. Measured on a GTX 1080.
 
 | Input Image Size  | Output Size   | Time (s)  | FPS |
 |   -------------   |:-------------:|:---------:|:---:|
