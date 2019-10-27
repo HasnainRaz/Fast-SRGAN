@@ -16,6 +16,8 @@ The following runtimes/fps are obtained by averaging runtimes over 800 frames.
 |     256x256       |    1024x1024  |   0.034   | 30  |
 |     384x384       |    1536x1536  |   0.068   | 15  |
 
+We see it's possible to upsample to 720p at around 30fps.
+
 # Pre-trained Model
 A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 6 inverted residual blocks, with 32 filters in every layer of the generator. 
 
@@ -32,14 +34,12 @@ Model checkpoints and training summaries are saved in tensorboard. To monitor tr
 Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image. The generated samples appear softer. Maybe a side effect of using the MSE loss. Loss weights need to be tuned possibly.
 
 <p align="center">
+  <b>384x384 to 1536x1536 Upsampling</b>
+  <img src="https://user-images.githubusercontent.com/4294680/67642055-4f7a9900-f908-11e9-93d7-5efc902bd81c.png"> 
   <b>256x256 to 1024x1024 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67641777-3d4b2b80-f905-11e9-8d59-9084991697ed.png"> 
-  <b>256x256 to 1024x1024 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67641778-40deb280-f905-11e9-91a6-fd44bafe3db6.png">
+  <img src="https://user-images.githubusercontent.com/4294680/67642015-d0856080-f907-11e9-9ff0-0775a8f1fdef.png">
   <b>128x128 to 512x512 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67641822-afbc0b80-f905-11e9-85bc-3e855c709a91.png">
-  <b>128x128 to 512x512 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67641823-b185cf00-f905-11e9-91e8-17d9337af6e3.png">
+  <img src="https://user-images.githubusercontent.com/4294680/67641979-5ead1700-f907-11e9-866c-b72d2e1dec8a.png">
 </p>
 
 # Extreme Super Resolution
