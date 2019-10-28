@@ -31,7 +31,7 @@ python main.py --image_dir 'path/to/image/directory' --hr_size 384 --lr 1e-4 --s
 Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the 'logs' directory that will created when you start training.
 
 # Samples
-Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image. The generated samples appear softer. Maybe a side effect of using the MSE loss. Loss weights need to be tuned possibly.
+Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image.
 
 <p align="center">
   <b>384x384 to 1536x1536 Upsampling</b>
