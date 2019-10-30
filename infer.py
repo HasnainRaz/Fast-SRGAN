@@ -37,14 +37,14 @@ def main():
         # Get super resolution image
         sr = model.predict(np.expand_dims(low_res, axis=0))[0]
 
-        # Rescale values in range 0-1
+        # Rescale values in range 0-255
         sr = ((sr + 1) / 2.) * 255
 
         # Convert back to BGR for opencv
         sr = cv2.cvtColor(sr, cv2.COLOR_RGB2BGR)
 
         # Save the results:
-        cv2.imwrite(os.path.join(args.output_dir, '{}'.format(os.path.basename(image_path))), sr)
+        cv2.imwrite(os.path.join(args.output_dir, os.path.basename(image_path)), sr)
 
 
 if __name__ == '__main__':
