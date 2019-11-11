@@ -18,6 +18,12 @@ The following runtimes/fps are obtained by averaging runtimes over 800 frames. M
 
 We see it's possible to upsample to 720p at around 30fps.
 
+# Requirements
+This was tested on Python 3.7. To install the required packages, use the provided requirements.txt file like so:
+```bash
+pip install -r requirements.txt
+```
+
 # Pre-trained Model
 A pretrained generator model on the DIV2k dataset is provided in the 'models' directory. It uses 6 inverted residual blocks, with 32 filters in every layer of the generator. 
 
