@@ -164,17 +164,16 @@ class FastSRGAN(object):
                 return keras.layers.Add(name=prefix + 'add')([inputs, x])
             return x
 
-        def deconv2d(layer_input, filters):
+        def deconv2d(layer_input):
             """Upsampling layer to increase height and width of the input.
             Uses PixelShuffle for upsampling.
             Args:
                 layer_input: The input tensor to upsample.
-                filters: Numbers of expansion filters.
             Returns:
                 u: Upsampled input by a factor of 2.
             """
-            u = keras.layers.Conv2D(filters, kernel_size=3, strides=1, padding='same')(layer_input)
-            u = tf.nn.depth_to_space(u, 2)
+            u = keras.layers.UpSampling2D(size=2, interpolation='bilinear')(layer_input)
+            u = keras.layers.Conv2D(self.gf, kernel_size=3, strides=1, padding='same')(u)
             u = keras.layers.PReLU(shared_axes=[1, 2])(u)
             return u
 
@@ -197,8 +196,8 @@ class FastSRGAN(object):
         c2 = keras.layers.Add()([c2, c1])
         
         # Upsampling
-        u1 = deconv2d(c2, self.gf * 4)
-        u2 = deconv2d(u1, self.gf * 4)
+        u1 = deconv2d(c2)
+        u2 = deconv2d(u1)
 
         # Generate high resolution output
         gen_hr = keras.layers.Conv2D(3, kernel_size=3, strides=1, padding='same', activation='tanh')(u2)
