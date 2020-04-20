@@ -79,7 +79,7 @@ inputs = keras.Input((None, None, 3))
 outputs = model(inputs)
 
 # Override the model:
-model = keras.model.Model(inputs, outputs)
+model = keras.models.Model(inputs, outputs)
 
 # Now you are free to predict on images of any size.
 ```
