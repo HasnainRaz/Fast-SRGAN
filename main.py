@@ -123,7 +123,9 @@ def train(model, dataset, log_iter, writer):
                 tf.summary.image('High Res', tf.cast(255 * (y + 1.0) / 2.0, tf.uint8), step=model.iterations)
                 tf.summary.image('Generated', tf.cast(255 * (model.generator.predict(x) + 1.0) / 2.0, tf.uint8),
                                  step=model.iterations)
+                model.generator.compile(loss='mse', optimizer='rmsprop')
                 model.generator.save('models/generator.h5')
+                model.discriminator.compile(loss='mse', optimizer='rmsprop')
                 model.discriminator.save('models/discriminator.h5')
                 writer.flush()
             model.iterations += 1
