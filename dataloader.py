@@ -7,7 +7,7 @@ from tensorflow.python.ops import array_ops, math_ops
 class DataLoader(object):
     """Data Loader for the SR GAN, that prepares a tf data object for training."""
 
-    def __init__(self, image_dir, hr_image_size):
+    def __init__(self, image_dir, hr_image_size, image_type):
         """
         Initializes the dataloader.
         Args:
@@ -19,6 +19,7 @@ class DataLoader(object):
         """
         self.image_paths = [os.path.join(image_dir, x) for x in os.listdir(image_dir)]
         self.image_size = hr_image_size
+        self.image_type = image_type.lower()
 
     def _parse_image(self, image_path):
         """
@@ -30,7 +31,15 @@ class DataLoader(object):
         """
 
         image = tf.io.read_file(image_path)
-        image = tf.image.decode_jpeg(image, channels=3)
+        if self.image_type == "png":
+            image = tf.image.decode_png(image, channels=3)
+        elif self.image_type == "jpg" or self.image_type == "jpeg":
+            image = tf.image.decode_jpeg(image, channels=3)
+        elif self.image_type == "bmp":
+            image = tf.image.decode_bmp(image, channels=3)
+        else:
+            return "Unknown image type."
+
         image = tf.image.convert_image_dtype(image, tf.float32)
 
         # Check if image is large enough
