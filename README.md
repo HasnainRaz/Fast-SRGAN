@@ -38,7 +38,7 @@ python infer.py --image_dir 'path/to/your/image/directory' --output_dir 'path/to
 # Training
 To train, simply execute the following command in your terminal:
 ```bash
-python main.py --image_dir 'path/to/image/directory' --hr_size 384 --lr 1e-4 --save_iter 200 --epochs 10 --batch_size 14
+python main.py --image_dir 'path/to/image/directory' --image_type 'image file format (jpg, png, bmp)' --hr_size 384 --lr 1e-4 --save_iter 200 --epochs 10 --batch_size 14
 ```
 Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the 'logs' directory that will created when you start training.
 
