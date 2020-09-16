@@ -14,6 +14,14 @@ parser.add_argument('--lr', default=1e-4, type=float, help='Learning rate for op
 parser.add_argument('--save_iter', default=200, type=int,
                     help='The number of iterations to save the tensorboard summaries and models.')
 
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 
 @tf.function
 def pretrain_step(model, x, y):
