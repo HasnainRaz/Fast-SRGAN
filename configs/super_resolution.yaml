@@ -1,5 +1,6 @@
 DATA:
-  IMAGE_DIR: '/home/hasnain/Datasets/SeattleSportsScience/images'
+  TRAIN_IMAGE_DIR: '/home/hasnain/Datasets/DIV2k/train'
+  VAL_IMAGE_DIR: '/home/hasnain/Datasets/DIV2k/val'
   HIGH_RES_IMAGE_SIZE: 256
   NUM_WORKERS: 4
 MODEL:
