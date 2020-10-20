@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torchvision.utils import make_grid
 
-from model import FastGenerator, Discriminator, MobileNetEncoder
+from model import FastGenerator, Discriminator, MobileNetEncoder, VGGEncoder
 
 
 class FastSRGAN(pl.LightningModule):
@@ -12,7 +12,13 @@ class FastSRGAN(pl.LightningModule):
         self.hparams = hparams
         self.generator = FastGenerator(hparams)
         self.discriminator = Discriminator(hparams)
-        self.feature_extractor = MobileNetEncoder()
+        if hparams.FEATURE_EXTRACTOR == 'mobile':
+            self.feature_extractor = MobileNetEncoder()
+        elif hparams.FEATURE_EXTRACTOR == 'vgg':
+            self.feature_extractor = VGGEncoder()
+        else:
+            raise ValueError(
+                "Feature extractor can either be 'mobile' or 'vgg', please set the appropriate name in the config")
         self.ssim = pl.metrics.SSIM()
         self.psnr = pl.metrics.PSNR()
         self.x_cache, self.y_cache, self.z_cache = None, None, None
@@ -37,13 +43,12 @@ class FastSRGAN(pl.LightningModule):
             true_features = self.feature_extractor((y + 1) * 127.5)
 
             content_loss = F.mse_loss(fake_features, true_features)
-            adversarial_loss = F.binary_cross_entropy_with_logits(fake_prediction,
-                                                                  torch.ones(fake_prediction.shape).type_as(
-                                                                      fake_prediction))
+            adversarial_loss = (1 - fake_prediction).mean()
             mse_loss = F.mse_loss(z, y)
-            g_loss = self.hparams.GENERATOR.ADVERSARIAL_WEIGHT * adversarial_loss + \
-                     self.hparams.GENERATOR.CONTENT_WEIGHT * content_loss + \
-                     self.hparams.GENERATOR.MSE_WEIGHT * mse_loss
+            adv_loss = self.hparams.GENERATOR.ADVERSARIAL_WEIGHT * adversarial_loss
+            content_loss = self.hparams.GENERATOR.CONTENT_WEIGHT * content_loss
+            mse_loss = self.hparams.GENERATOR.MSE_WEIGHT * mse_loss
+            g_loss = (adv_loss + content_loss + mse_loss) / 3
 
             if batch_idx % 10 == 0:
                 self.logger.experiment.add_scalar('Loss/Generator', g_loss, self.global_step)
@@ -56,13 +61,9 @@ class FastSRGAN(pl.LightningModule):
             for p in self.generator.parameters():
                 p.trainable = False
 
-            true_prediction = self.discriminator(y)
-            fake_prediction = self.discriminator(z.detach())
-            valid_loss = F.binary_cross_entropy_with_logits(true_prediction,
-                                                            torch.ones(true_prediction.shape).type_as(true_prediction))
-            fake_loss = F.binary_cross_entropy_with_logits(fake_prediction,
-                                                           torch.zeros(fake_prediction.shape).type_as(fake_prediction))
-            d_loss = (valid_loss + fake_loss) * 0.5
+            true_prediction = self.discriminator(y).mean()
+            fake_prediction = self.discriminator(z.detach()).mean()
+            d_loss = 1 - true_prediction + fake_prediction
 
             if batch_idx % 10 == 0:
                 self.logger.experiment.add_scalar('Loss/Discriminator', d_loss, self.global_step)

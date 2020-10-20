@@ -1,9 +1,11 @@
 DATA:
-  TRAIN_IMAGE_DIR: '/home/hasnain/Datasets/DIV2k/train'
-  VAL_IMAGE_DIR: '/home/hasnain/Datasets/DIV2k/val'
+  TRAIN_IMAGE_DIR: '/home/hasnain/Datasets/DIV2K/train'
+  VAL_IMAGE_DIR: '/home/hasnain/Datasets/DIV2K/val'
   HIGH_RES_IMAGE_SIZE: 256
   NUM_WORKERS: 4
 MODEL:
+  BLOCK: 'residual'
+  FEATURE_EXTRACTOR: 'vgg'
   GENERATOR:
     FEATURES: 32
     NUM_BLOCKS: 6
@@ -19,7 +21,7 @@ MODEL:
     LEARNING_RATE: 0.0001
     WEIGHT_DECAY: 0.002
 TRAINING:
-  BATCH_SIZE: 32
+  BATCH_SIZE: 16
   EPOCHS: 100
   HALF_PRECISION: false
   GPUS: 1
