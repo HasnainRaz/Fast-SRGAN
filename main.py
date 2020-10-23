@@ -32,7 +32,7 @@ def main(cfg):
                       callbacks=[early_stop_callback],
                       checkpoint_callback=checkpoint_callback,
                       precision=cfg.TRAINING.PRECISION,
-                      accelerator='ddp')
+                      accelerator=cfg.TRAINING.ACCELERATOR)
     trainer.fit(module, train_loader, val_loader)
 
 

@@ -124,9 +124,8 @@ class Discriminator(nn.Module):
                                   1,
                                   kernel_size=1,
                                   padding=0)
-        self.activation = nn.Sigmoid()
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.stem(x)
-        return self.activation(self.validity(x))
+        return self.validity(x)
