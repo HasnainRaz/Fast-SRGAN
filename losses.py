@@ -9,8 +9,9 @@ class RALoss(nn.Module):
         self.loss_fn = nn.BCEWithLogitsLoss()
 
     def forward(self, real_out, fake_out):
-        zeros = torch.zeros(real_out.shape).type_as(real_out)
-        ones = torch.ones(real_out.shape).type_as(real_out)
+        # Label Smoothing
+        zeros = torch.rand(real_out.shape).type_as(real_out).uniform_(0, 0.3)
+        ones = torch.ones(real_out.shape).type_as(real_out).uniform_(0.7, 1.2)
 
         a = real_out - torch.mean(fake_out, dim=0)
         b = fake_out - torch.mean(real_out, dim=0)
