@@ -61,7 +61,7 @@ class FastGenerator(nn.Module):
         """
         super(FastGenerator, self).__init__()
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, cfg.GENERATOR.FEATURES, kernel_size=9, stride=1, padding=4),
+            nn.Conv2d(3, cfg.GENERATOR.FEATURES, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(cfg.GENERATOR.FEATURES),
             nn.PReLU()
         )
@@ -88,7 +88,7 @@ class FastGenerator(nn.Module):
             nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES, kernel_size=3, padding=1),
             nn.PReLU()
         )
-        self.final_conv = nn.Conv2d(cfg.GENERATOR.FEATURES, 3, kernel_size=9, padding=4)
+        self.final_conv = nn.Conv2d(cfg.GENERATOR.FEATURES, 3, kernel_size=3, padding=1)
 
     def forward(self, x):
         x = self.conv1(x)
