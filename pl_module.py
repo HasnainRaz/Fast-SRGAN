@@ -105,6 +105,7 @@ class FastSRGAN(pl.LightningModule):
                                                    scale_each=True,
                                                    normalize=True),
                                          self.current_epoch)
+        self.logger.experiment.flush()
 
         self.log('SSIM/Generated', avg_generated_ssim, logger=True)
         self.log('SSIM/Bilinear', avg_bilinear_ssim, logger=True)
