@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+import pytorch_lightning.metrics.functional as metrics
 import torch
 import torch.nn.functional as F
 from torchvision.utils import make_grid
@@ -19,8 +20,6 @@ class FastSRGAN(pl.LightningModule):
         else:
             raise ValueError(
                 "Feature extractor can either be 'mobilenet' or 'vgg', please set the appropriate name in the config")
-        self.ssim = pl.metrics.SSIM()
-        self.psnr = pl.metrics.PSNR()
         self.x_cache, self.y_cache, self.z_cache = None, None, None
         for p in self.feature_extractor.parameters():
             p.trainable = False
@@ -75,10 +74,10 @@ class FastSRGAN(pl.LightningModule):
         self.x_cache, self.y_cache = x, y
         self.z_cache = self(x)
         x = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
-        ssim_bilinear = self.ssim(x, y)
-        ssim_generated = self.ssim(self.z_cache, y)
-        psnr_bilinear = self.psnr(x, y)
-        psnr_generated = self.psnr(self.z_cache, y)
+        ssim_bilinear = metrics.ssim(x, y)
+        ssim_generated = metrics.ssim(self.z_cache, y)
+        psnr_bilinear = metrics.psnr(x, y)
+        psnr_generated = metrics.psnr(self.z_cache, y)
 
         return {'ssim_bilinear': ssim_bilinear,
                 'ssim_generated': ssim_generated,
@@ -106,12 +105,11 @@ class FastSRGAN(pl.LightningModule):
                                                    scale_each=True,
                                                    normalize=True),
                                          self.current_epoch)
-        self.logger.experiment.flush()
 
-        return {'generated_ssim': avg_generated_ssim, 'log': {'PSNR/Generated': avg_generated_psnr,
-                                                              'PSNR/Bilinear': avg_bilinear_psnr,
-                                                              'SSIM/Generated': avg_generated_ssim,
-                                                              'SSIM/Bilinear': avg_bilinear_ssim}}
+        self.log('SSIM/Generated', avg_generated_ssim, logger=True)
+        self.log('SSIM/Bilinear', avg_bilinear_ssim, logger=True)
+        self.log('PSNR/Generated', avg_generated_psnr, logger=True)
+        self.log('PSNR/Bilinear', avg_bilinear_psnr, logger=True)
 
     def configure_optimizers(self):
         opt_g = torch.optim.Adam(self.generator.parameters(),
