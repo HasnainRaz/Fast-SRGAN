@@ -12,13 +12,13 @@ class FastSRGAN(pl.LightningModule):
         self.hparams = hparams
         self.generator = FastGenerator(hparams)
         self.discriminator = Discriminator(hparams)
-        if hparams.FEATURE_EXTRACTOR == 'mobile':
+        if hparams.FEATURE_EXTRACTOR == 'mobilenet':
             self.feature_extractor = MobileNetEncoder()
         elif hparams.FEATURE_EXTRACTOR == 'vgg':
             self.feature_extractor = VGGEncoder()
         else:
             raise ValueError(
-                "Feature extractor can either be 'mobile' or 'vgg', please set the appropriate name in the config")
+                "Feature extractor can either be 'mobilenet' or 'vgg', please set the appropriate name in the config")
         self.ssim = pl.metrics.SSIM()
         self.psnr = pl.metrics.PSNR()
         self.x_cache, self.y_cache, self.z_cache = None, None, None
@@ -39,8 +39,8 @@ class FastSRGAN(pl.LightningModule):
                 p.trainable = True
 
             fake_prediction = self.discriminator(z)
-            fake_features = self.feature_extractor((z + 1) * 127.5)
-            true_features = self.feature_extractor((y + 1) * 127.5)
+            fake_features = self.feature_extractor((z + 1) / 2.0)
+            true_features = self.feature_extractor((y + 1) / 2.0)
 
             content_loss = F.mse_loss(fake_features, true_features)
             adversarial_loss = (1 - fake_prediction).mean()
@@ -48,7 +48,7 @@ class FastSRGAN(pl.LightningModule):
             adv_loss = self.hparams.GENERATOR.ADVERSARIAL_WEIGHT * adversarial_loss
             content_loss = self.hparams.GENERATOR.CONTENT_WEIGHT * content_loss
             mse_loss = self.hparams.GENERATOR.MSE_WEIGHT * mse_loss
-            g_loss = (adv_loss + content_loss + mse_loss) / 3
+            g_loss = adv_loss + content_loss + mse_loss
 
             if batch_idx % 10 == 0:
                 self.logger.experiment.add_scalar('Loss/Generator', g_loss, self.global_step)

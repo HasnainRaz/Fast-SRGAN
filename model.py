@@ -40,6 +40,9 @@ class VGGEncoder(VGG):
         features = make_layers(cfgs['D'])
         super(VGGEncoder, self).__init__(features)
         self.load_state_dict(load_state_dict_from_url(vgg_urls['vgg16']))
+        del self.classifier
+        del self.avgpool
+        self.features = nn.Sequential(*[x for x in list(self.features.children())[:-2]])
 
     def forward(self, x):
         return self.features(x)
@@ -65,7 +68,7 @@ class FastGenerator(nn.Module):
         if cfg.BLOCK == 'residual':
             block = ResidualBlock
         elif cfg.BLOCK == 'inverted_residual':
-            block = partial(InvertedResidual, stride=1)
+            block = partial(InvertedResidual, stride=1, expand_ratio=cfg.GENERATOR.EXPANSION_FACTOR)
         else:
             raise ValueError(
                 "Only 'residual' or 'inverted_residual' blocks are supported, please specify one in the config ")
@@ -77,23 +80,22 @@ class FastGenerator(nn.Module):
         )
 
         self.upsampling = nn.Sequential(
-            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES * 4, kernel_size=3, padding=1),
-            nn.PixelShuffle(upscale_factor=2),
+            nn.UpsamplingNearest2d(scale_factor=2),
+            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES, kernel_size=3, padding=1),
             nn.PReLU(),
 
-            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES * 4, kernel_size=3, padding=1),
-            nn.PixelShuffle(upscale_factor=2),
+            nn.UpsamplingNearest2d(scale_factor=2),
+            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES, kernel_size=3, padding=1),
             nn.PReLU()
         )
         self.final_conv = nn.Conv2d(cfg.GENERATOR.FEATURES, 3, kernel_size=9, padding=4)
-        self.activation = nn.Tanh()
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.blocks(x)
         x = self.upsampling(x)
         x = self.final_conv(x)
-        return self.activation(x)
+        return x
 
 
 class Discriminator(nn.Module):

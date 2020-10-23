@@ -26,8 +26,10 @@ def main(cfg):
     checkpoint_callback = ModelCheckpoint(monitor='generated_ssim', mode='max')
     module = FastSRGAN(cfg.MODEL)
     module.example_input_array = torch.rand((1, 3, 256, 256))
-    trainer = Trainer(max_epochs=cfg.TRAINING.EPOCHS, gpus=cfg.TRAINING.GPUS, checkpoint_callback=checkpoint_callback,
-                      limit_train_batches=0.2)
+    trainer = Trainer(max_epochs=cfg.TRAINING.EPOCHS,
+                      gpus=cfg.TRAINING.GPUS,
+                      checkpoint_callback=checkpoint_callback,
+                      precision=cfg.TRAINING.PRECISION)
     trainer.fit(module, train_loader, val_loader)
 
 
