@@ -3,6 +3,7 @@ import pytorch_lightning.metrics.functional as metrics
 import torch
 import torch.nn.functional as F
 from torchvision.utils import make_grid
+from tqdm import tqdm
 
 from losses import RALoss
 from model import FastGenerator, Discriminator, MobileNetEncoder, VGGEncoder
@@ -29,13 +30,21 @@ class FastSRGAN(pl.LightningModule):
     def forward(self, x):
         return self.generator(x)
 
+    def pretrain(self, train_loader, optimizer):
+        step = 0
+        pbar = tqdm(range(self.hparams.GENERATOR.PRETRAIN_EPOCHS))
+        for _ in pbar:
+            for x, y in train_loader:
+                optimizer.zero_grad()
+                z = self.generator(x)
+                loss = F.mse_loss(z, y)
+                loss.backward()
+                optimizer.step()
+                pbar.set_description(f'Pretrain Loss: {loss.item()}')
+                step += 1
+
     def training_step(self, batch, batch_idx, optimizer_idx):
         x, y = batch
-
-        if self.global_step < self.hparams.GENERATOR.PRETRAIN_STEPS:
-            z = self.generator(x)
-            loss = F.mse_loss(z, y)
-            return {'loss', loss}
 
         self.feature_extractor.eval()
         z = self.generator(x)
