@@ -32,7 +32,7 @@ class FastSRGAN(pl.LightningModule):
     def training_step(self, batch, batch_idx, optimizer_idx):
         x, y = batch
 
-        if self.global_step < self.hparams.TRAINING.PRETRAIN_STEPS:
+        if self.global_step < self.hparams.GENERATOR.PRETRAIN_STEPS:
             z = self.generator(x)
             loss = F.mse_loss(z, y)
             return {'loss', loss}
