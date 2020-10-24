@@ -31,6 +31,12 @@ class FastSRGAN(pl.LightningModule):
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         x, y = batch
+
+        if self.global_step < self.hparams.TRAINING.PRETRAIN_STEPS:
+            z = self.generator(x)
+            loss = F.mse_loss(z, y)
+            return {'loss', loss}
+
         self.feature_extractor.eval()
         z = self.generator(x)
         if optimizer_idx == 0:
@@ -46,11 +52,9 @@ class FastSRGAN(pl.LightningModule):
 
             content_loss = F.mse_loss(fake_features, true_features)
             adversarial_loss = self.loss_fn(fake_prediction, true_prediction)
-            mse_loss = F.mse_loss(z, y)
             adv_loss = self.hparams.GENERATOR.ADVERSARIAL_WEIGHT * adversarial_loss
             content_loss = self.hparams.GENERATOR.CONTENT_WEIGHT * content_loss
-            mse_loss = self.hparams.GENERATOR.MSE_WEIGHT * mse_loss
-            g_loss = adv_loss + content_loss + mse_loss
+            g_loss = adv_loss + content_loss
 
             if batch_idx % 10 == 0:
                 self.logger.experiment.add_scalar('Loss/Generator', g_loss, self.global_step)
@@ -63,8 +67,8 @@ class FastSRGAN(pl.LightningModule):
             for p in self.generator.parameters():
                 p.trainable = False
 
-            true_prediction = self.discriminator(y).mean()
-            fake_prediction = self.discriminator(z.detach()).mean()
+            true_prediction = self.discriminator(y)
+            fake_prediction = self.discriminator(z.detach())
             d_loss = self.loss_fn(true_prediction, fake_prediction)
             if batch_idx % 10 == 0:
                 self.logger.experiment.add_scalar('Loss/Discriminator', d_loss, self.global_step)

@@ -80,12 +80,12 @@ class FastGenerator(nn.Module):
         )
 
         self.upsampling = nn.Sequential(
-            nn.UpsamplingNearest2d(scale_factor=2),
-            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES, kernel_size=3, padding=1),
+            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES * 4, kernel_size=3, padding=1),
+            nn.PixelShuffle(upscale_factor=2),
             nn.PReLU(),
 
-            nn.UpsamplingNearest2d(scale_factor=2),
-            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES, kernel_size=3, padding=1),
+            nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES * 4, kernel_size=3, padding=1),
+            nn.PixelShuffle(upscale_factor=2),
             nn.PReLU()
         )
         self.final_conv = nn.Conv2d(cfg.GENERATOR.FEATURES, 3, kernel_size=3, padding=1)
