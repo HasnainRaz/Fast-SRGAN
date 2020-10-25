@@ -43,46 +43,61 @@ class FastSRGAN(pl.LightningModule):
                 pbar.set_description(f'Pretrain Loss: {loss.item()}')
                 step += 1
 
+    def generator_loss(self, x, y):
+        self.feature_extractor.eval()
+        z = self(x)
+        fake_prediction = self.discriminator(z)
+        fake_features = self.feature_extractor((z + 1) / 2.0)
+        true_features = self.feature_extractor((y + 1) / 2.0)
+
+        content_loss = F.mse_loss(fake_features, true_features)
+        adversarial_loss = F.binary_cross_entropy_with_logits(fake_prediction,
+                                                              torch.zeros(fake_prediction.shape).type_as(
+                                                                  fake_prediction))
+        adv_loss = self.hparams.GENERATOR.ADVERSARIAL_WEIGHT * adversarial_loss
+        content_loss = self.hparams.GENERATOR.CONTENT_WEIGHT * content_loss
+        g_loss = adv_loss + content_loss
+
+        return g_loss
+
+    def discriminator_loss(self, x, y):
+        real_prediction = self.discriminator(y)
+        real_loss = F.binary_cross_entropy_with_logits(real_prediction,
+                                                       torch.zeros(real_prediction.shape,
+                                                                   device=self.device))
+        super_resolved = self(x)
+        fake_prediction = self.discriminator(super_resolved)
+        fake_loss = F.binary_cross_entropy_with_logits(fake_prediction,
+                                                       torch.ones(fake_prediction.shape,
+                                                                  device=self.device))
+
+        d_loss = fake_loss + real_loss
+        return d_loss
+
+    def generator_step(self, x, y):
+        g_loss = self.generator_loss(x, y)
+
+        self.log('Loss/Generator', g_loss, on_epoch=True, prog_bar=True)
+        return g_loss
+
+    def discriminator_step(self, x, y):
+        d_loss = self.discriminator_loss(x, y)
+        self.log('Loss/Discriminator', d_loss, on_epoch=True, prog_bar=True)
+        return d_loss
+
     def training_step(self, batch, batch_idx, optimizer_idx):
         x, y = batch
 
-        self.feature_extractor.eval()
-        z = self.generator(x)
+        # train generator
+        result = None
         if optimizer_idx == 0:
-            for p in self.discriminator.parameters():
-                p.trainable = False
-            for p in self.generator.parameters():
-                p.trainable = True
+            result = self.generator_step(x, y)
 
-            true_prediction = self.discriminator(y)
-            fake_prediction = self.discriminator(z)
-            fake_features = self.feature_extractor((z + 1) / 2.0)
-            true_features = self.feature_extractor((y + 1) / 2.0)
-
-            content_loss = F.mse_loss(fake_features, true_features)
-            adversarial_loss = self.loss_fn(fake_prediction, true_prediction)
-            adv_loss = self.hparams.GENERATOR.ADVERSARIAL_WEIGHT * adversarial_loss
-            content_loss = self.hparams.GENERATOR.CONTENT_WEIGHT * content_loss
-            g_loss = adv_loss + content_loss
-
-            if batch_idx % 10 == 0:
-                self.logger.experiment.add_scalar('Loss/Generator', g_loss, self.global_step)
-
-            return {'loss': g_loss}
-
+        # train discriminator
         if optimizer_idx == 1:
-            for p in self.discriminator.parameters():
-                p.trainable = True
-            for p in self.generator.parameters():
-                p.trainable = False
+            result = self.discriminator_step(x, y)
 
-            true_prediction = self.discriminator(y)
-            fake_prediction = self.discriminator(z.detach())
-            d_loss = self.loss_fn(true_prediction, fake_prediction)
-            if batch_idx % 10 == 0:
-                self.logger.experiment.add_scalar('Loss/Discriminator', d_loss, self.global_step)
-
-            return {'loss': d_loss}
+        return result
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
