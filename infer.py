@@ -37,7 +37,7 @@ def main():
         sr = model.predict(np.expand_dims(low_res, axis=0))[0]
 
         # Rescale values in range 0-255
-        sr = ((sr + 1) / 2.) * 255
+        sr = (((sr + 1) / 2.) * 255).astype(np.uint8)
 
         # Convert back to BGR for opencv
         sr = cv2.cvtColor(sr, cv2.COLOR_RGB2BGR)
