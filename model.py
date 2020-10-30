@@ -79,6 +79,8 @@ class FastGenerator(nn.Module):
             ]
         )
 
+        self.trunk_conv = block(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES)
+
         self.upsampling = nn.Sequential(
             nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES * 4, kernel_size=3, padding=1),
             nn.PixelShuffle(upscale_factor=2),
@@ -93,8 +95,9 @@ class FastGenerator(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.blocks(x)
-        x = self.upsampling(x)
+        c = self.blocks(x)
+        c = self.trunk_conv(c)
+        x = self.upsampling(x + c)
         x = self.final_conv(x)
         return self.activation(x)
 
