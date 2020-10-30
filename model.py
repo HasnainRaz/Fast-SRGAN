@@ -89,13 +89,14 @@ class FastGenerator(nn.Module):
             nn.PReLU()
         )
         self.final_conv = nn.Conv2d(cfg.GENERATOR.FEATURES, 3, kernel_size=3, padding=1)
+        self.activation = nn.Tanh()
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.blocks(x)
         x = self.upsampling(x)
         x = self.final_conv(x)
-        return x
+        return self.activation(x)
 
 
 class Discriminator(nn.Module):

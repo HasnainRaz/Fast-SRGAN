@@ -48,7 +48,7 @@ class FastSRGAN(pl.LightningModule):
         z = self(x)
         fake_prediction = self.discriminator(z)
         fake_features = self.feature_extractor((z + 1) / 2.0)
-        true_features = self.feature_extractor((y + 1) / 2.0)
+        true_features = self.feature_extractor((y + 1) / 2.0).detach()
 
         content_loss = F.mse_loss(fake_features, true_features)
         adversarial_loss = F.binary_cross_entropy_with_logits(fake_prediction,
@@ -66,7 +66,7 @@ class FastSRGAN(pl.LightningModule):
                                                        torch.zeros(real_prediction.shape,
                                                                    device=self.device))
         super_resolved = self(x)
-        fake_prediction = self.discriminator(super_resolved)
+        fake_prediction = self.discriminator(super_resolved.detach())
         fake_loss = F.binary_cross_entropy_with_logits(fake_prediction,
                                                        torch.ones(fake_prediction.shape,
                                                                   device=self.device))

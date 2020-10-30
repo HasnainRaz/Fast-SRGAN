@@ -33,8 +33,6 @@ def main(cfg):
                       checkpoint_callback=checkpoint_callback,
                       precision=cfg.TRAINING.PRECISION,
                       accelerator=cfg.TRAINING.ACCELERATOR)
-    optimizer = module.configure_optimizers()[0][0]
-    module.pretrain(train_loader, optimizer)
     trainer.fit(module, train_loader, val_loader)
 
 
