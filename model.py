@@ -1,9 +1,49 @@
 from functools import partial
 
 import torch.nn as nn
-from torchvision.models.mobilenet import InvertedResidual, ConvBNReLU, \
-    MobileNetV2, model_urls as mobile_urls, load_state_dict_from_url
-from torchvision.models.vgg import VGG, make_layers, cfgs, model_urls as vgg_urls
+from torchvision.models.vgg import vgg19
+
+
+class ConvBlock(nn.Sequential):
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1, norm_layer=None, activation='prelu'):
+        padding = (kernel_size - 1) // 2
+        super(ConvBlock, self).__init__(
+            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False),
+            norm_layer(out_planes),
+            nn.PReLU() if activation.lower() == 'prelu' else nn.LeakyReLU()
+        )
+
+
+class InvertedResidual(nn.Module):
+    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None):
+        super(InvertedResidual, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        hidden_dim = int(round(inp * expand_ratio))
+        self.use_res_connect = self.stride == 1 and inp == oup
+
+        layers = []
+        if expand_ratio != 1:
+            # pw
+            layers.append(ConvBlock(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
+        layers.extend([
+            # dw
+            ConvBlock(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
+            # pw-linear
+            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            norm_layer(oup),
+        ])
+        self.conv = nn.Sequential(*layers)
+
+    def forward(self, x):
+        if self.use_res_connect:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
 
 
 class ResidualBlock(nn.Module):
@@ -25,27 +65,17 @@ class ResidualBlock(nn.Module):
         return x + residual
 
 
-class MobileNetEncoder(MobileNetV2):
+class VGGEncoder(nn.Module):
     def __init__(self):
-        super(MobileNetEncoder, self).__init__(num_classes=1000)
-        self.load_state_dict(load_state_dict_from_url(mobile_urls['mobilenet_v2']))
-        del self.classifier
+        super(VGGEncoder, self).__init__()
+        self.net = vgg19(pretrained=True)
+        del self.net.avgpool
+        del self.net.classifier
 
-    def _forward_impl(self, x):
-        return self.features(x)
-
-
-class VGGEncoder(VGG):
-    def __init__(self):
-        features = make_layers(cfgs['D'])
-        super(VGGEncoder, self).__init__(features)
-        self.load_state_dict(load_state_dict_from_url(vgg_urls['vgg16']))
-        del self.classifier
-        del self.avgpool
-        self.features = nn.Sequential(*[x for x in list(self.features.children())[:-2]])
+        self.net = nn.Sequential(*list(self.net.features.children())[:-2])
 
     def forward(self, x):
-        return self.features(x)
+        return self.net(x)
 
 
 class FastGenerator(nn.Module):
@@ -79,8 +109,6 @@ class FastGenerator(nn.Module):
             ]
         )
 
-        self.trunk_conv = block(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES)
-
         self.upsampling = nn.Sequential(
             nn.Conv2d(cfg.GENERATOR.FEATURES, cfg.GENERATOR.FEATURES * 4, kernel_size=3, padding=1),
             nn.PixelShuffle(upscale_factor=2),
@@ -95,9 +123,8 @@ class FastGenerator(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        c = self.blocks(x)
-        c = self.trunk_conv(c)
-        x = self.upsampling(x + c)
+        x = self.blocks(x)
+        x = self.upsampling(x)
         x = self.final_conv(x)
         return self.activation(x)
 
@@ -105,17 +132,18 @@ class FastGenerator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, cfg):
         super(Discriminator, self).__init__()
-        self.conv1 = ConvBNReLU(3, cfg.DISCRIMINATOR.FEATURES)
+        self.conv1 = ConvBlock(3, cfg.DISCRIMINATOR.FEATURES, norm_layer=nn.BatchNorm2d, activation='leaky')
         in_features = cfg.DISCRIMINATOR.FEATURES
         out_features = cfg.DISCRIMINATOR.FEATURES
         strides = 1
         layers = []
         for i in range(cfg.DISCRIMINATOR.NUM_BLOCKS):
             layers.append(
-                ConvBNReLU(in_features,
-                           out_features,
-                           stride=strides,
-                           kernel_size=3)
+                ConvBlock(in_features,
+                          out_features,
+                          norm_layer=nn.BatchNorm2d,
+                          stride=strides,
+                          kernel_size=3)
             )
             if i % 2 != 0:
                 out_features = in_features * 2
@@ -124,12 +152,15 @@ class Discriminator(nn.Module):
                 in_features = out_features
                 strides = 1
         self.stem = nn.Sequential(*layers)
-        self.validity = nn.Conv2d(in_features,
-                                  1,
-                                  kernel_size=1,
-                                  padding=0)
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((6, 6))
+        self.fc1 = nn.Linear(in_features * 6 * 6, 1024)
+        self.leaky_relu = nn.LeakyReLU(0.2)
+        self.validity = nn.Linear(1024, 1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.stem(x)
+        x = self.adaptive_pool(x)
+        x = self.fc1(x.view(x.shape[0], -1))
+        x = self.leaky_relu(x)
         return self.validity(x)
