@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models.mobilenetv2 import InvertedResidual
+from torchvision.models.mobilenet import InvertedResidual
 from torchvision.models.vgg import vgg19
 import torch
 
