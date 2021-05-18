@@ -2,8 +2,8 @@ import numpy as np
 import cv2
 
 # Open a sample video available in sample-videos
-video_url = ''
-vcap = cv2.VideoCapture(video_url)
+video_name=''
+vcap = cv2.VideoCapture(video_name)
 
 if not vcap.isOpened():
    print("File Cannot be Opened")
