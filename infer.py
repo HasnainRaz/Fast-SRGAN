@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 from tensorflow import keras
 import numpy as np
-import cv2
 import os
+import tensorflow as tf
 
 parser = ArgumentParser()
 parser.add_argument('--image_dir', type=str, help='Directory where images are kept.')
@@ -31,7 +31,7 @@ def main():
     # Get all image paths
     image_paths = [os.path.join(args.image_dir, x) for x in os.listdir(args.image_dir)]
 
-    # Change model input shape to accept all size inputs
+    # Change model input shape to        accept all size inputs
     model = keras.models.load_model('models/generator.h5')
     model = change_model(model, new_input_shape=[None, None, None, 3])
 
@@ -39,25 +39,22 @@ def main():
     for image_path in image_paths:
         
         # Read image
-        low_res = cv2.imread(image_path, 1)
-
-        # Convert to RGB (opencv uses BGR as default)
-        low_res = cv2.cvtColor(low_res, cv2.COLOR_BGR2RGB)
+        low_res = tf.image.decode_image(tf.io.read_file(image_path), channels = 3)
 
         # Rescale to 0-1.
-        low_res = low_res / 255.0
+        low_res = low_res / 255
 
         # Get super resolution image
-        sr = model.predict(np.expand_dims(low_res, axis=0))[0]
+        sr = model.predict(tf.expand_dims(low_res, axis=0))[0]
 
         # Rescale values in range 0-255
         sr = (((sr + 1) / 2.) * 255).astype(np.uint8)
 
-        # Convert back to BGR for opencv
-        sr = cv2.cvtColor(sr, cv2.COLOR_RGB2BGR)
-
         # Save the results:
-        cv2.imwrite(os.path.join(args.output_dir, os.path.basename(image_path)), sr)
+        if image_path.endswith(".png"):
+            tf.io.write_file(os.path.join(args.output_dir, os.path.basename(image_path)), tf.image.encode_png(sr))
+        elif image_path.endswith(".jpeg"):
+            tf.io.write_file(os.path.join(args.output_dir, os.path.basename(image_path)), tf.image.encode_jpeg(sr))
 
 
 if __name__ == '__main__':
