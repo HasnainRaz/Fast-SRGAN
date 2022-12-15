@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from tensorflow import keras
-import numpy as np
 import os
 import tensorflow as tf
 
