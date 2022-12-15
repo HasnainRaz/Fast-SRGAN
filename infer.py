@@ -51,7 +51,7 @@ def main():
 
         # Save the results:
         if image_path.endswith(".png"):
-            tf.io.write_file(os.path.join(args.output_dir, os.path.basename(image_path)), tf.image.encode_png(sr))
+            tf.io.write_file(os.path.join(args.output_dir, os.path.basename(image_path)), tf.image.encode_png(sr, compression=9))
         elif image_path.endswith(".jpeg"):
             tf.io.write_file(os.path.join(args.output_dir, os.path.basename(image_path)), tf.image.encode_jpeg(sr))
 
