@@ -30,7 +30,7 @@ def main():
     # Get all image paths
     image_paths = [os.path.join(args.image_dir, x) for x in os.listdir(args.image_dir)]
 
-    # Change model input shape to        accept all size inputs
+    # Change model input shape to accept all size inputs
     model = keras.models.load_model('models/generator.h5')
     model = change_model(model, new_input_shape=[None, None, None, 3])
 
