@@ -47,7 +47,7 @@ def main():
         sr = model.predict(tf.expand_dims(low_res, axis=0))[0]
 
         # Rescale values in range 0-255
-        sr = (((sr + 1) / 2.) * 255).astype(np.uint8)
+        sr = tf.cast((((sr + 1) / 2.) * 255), tf.uint8)
 
         # Save the results:
         if image_path.endswith(".png"):
