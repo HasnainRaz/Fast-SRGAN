@@ -1,0 +1,23 @@
+experiment:
+  name: "SR"
+  seed: 1234
+data:
+  image_dir: "/Users/hasnain.raza/Datasets/DIV2K_train_HR"
+  lr_image_size: 24 
+  scale_factor: 4
+generator:
+  n_filters: 64 
+  n_layers: 16 
+discriminator:
+  n_filters: 64
+  n_layers: 7 
+vgg:
+  feature_layer: 34
+training:
+  pretrain_epochs: 20 
+  epochs: 5000
+  device: mps 
+  batch_size: 24
+  num_workers: 10 
+  generator_lr: 1e-4
+  discriminator_lr: 1e-4
