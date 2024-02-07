@@ -219,7 +219,7 @@ class Trainer:
                     global_step=len(train_dataloader) * epoch + step,
                 )
                 # Train the generator
-                generator_loss = 1e-2 * adv_loss + content_loss
+                generator_loss = 1e-3 * adv_loss + content_loss
                 generator_loss.backward()
                 self.optim_generator.step()
 
