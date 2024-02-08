@@ -34,7 +34,7 @@ class Trainer:
         )
 
         # Loss function for the adversarial players
-        self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        self.loss_fn = torch.nn.MSELoss() 
         # Loss function for the content loss
         self.l1_loss = torch.nn.SmoothL1Loss()
         # Keep some images in cache for tensorboard
@@ -108,7 +108,6 @@ class Trainer:
         if osp.exists("runs/pretrain.pt"):
             self.generator.load_state_dict(torch.load("runs/pretrain.pt"))
         real_labels = torch.ones((self.config.training.batch_size, 1), device=self.config.training.device)
-        fake_labels = torch.zeros((self.config.training.batch_size, 1), device=self.config.training.device)
         self.generator.train()
         self.discriminator.train()
         for step, (lr_image, hr_image) in tqdm(enumerate(train_dataloader, start=1)):
@@ -118,31 +117,30 @@ class Trainer:
             self.optim_discriminator.zero_grad()
             # Get the discriminator loss on real images:
             y_real = self.discriminator(hr_image)
-            loss_real = 0.5 * self.loss_fn(y_real, real_labels)
+            # Get the discriminator loss on generated_images:
+            fake_hr_images = self.generator(lr_image).detach()
+            y_fake = self.discriminator(fake_hr_images)
+            loss_real = self.loss_fn(y_real, y_fake.mean() + real_labels)
+            loss_fake = self.loss_fn(y_fake, y_real.mean() - real_labels)
+            discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
+            discriminator_loss.backward()
+            self.optim_discriminator.step()
             self.writer.add_scalar(
                 "Loss/Discriminator/Real",
                 loss_real,
                 global_step=step,
             )
-            # Get the discriminator loss on generated_images:
-            fake_hr_images = self.generator(lr_image).detach()
-            y_fake = self.discriminator(fake_hr_images)
-            loss_fake = 0.5 * self.loss_fn(y_fake, fake_labels)
             self.writer.add_scalar(
                 "Loss/Discriminator/Fake",
                 loss_fake,
                 global_step=step,
             )
-            # Train the discriminator
-            discriminator_loss = loss_real + loss_fake
-            discriminator_loss.backward()
-            self.optim_discriminator.step()
-
             # Get the adv loss for the generator
             self.optim_generator.zero_grad()
             fake_hr_images = self.generator(lr_image)
             y_fake = self.discriminator(fake_hr_images)
-            adv_loss = self.loss_fn(y_fake, real_labels)
+            y_real = self.discriminator(hr_image)
+            adv_loss = 0.5 * self.loss_fn(y_fake, y_real.mean() + real_labels) + 0.5 * self.loss_fn(y_real, y_fake.mean() - real_labels)
             self.writer.add_scalar(
                 "Loss/Generator/Adversarial",
                 adv_loss,
