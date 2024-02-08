@@ -14,9 +14,10 @@ discriminator:
 vgg:
   feature_layer: 34
 training:
-  pretrain_epochs: 20 
-  epochs: 5000
-  device: mps 
+  pretrain_iterations: 1000 
+  iterations: 100000
+  device: mps
+  log_iter: 100
   batch_size: 24
   num_workers: 10 
   generator_lr: 1e-4

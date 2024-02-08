@@ -51,6 +51,7 @@ class ResidualBlock(torch.nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
+            bias=False
         )
         self.bn1 = torch.nn.BatchNorm2d(out_channels)
         self.act1 = torch.nn.PReLU()
@@ -60,6 +61,7 @@ class ResidualBlock(torch.nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
+            bias=False
         )
         self.bn2 = torch.nn.BatchNorm2d(out_channels)
 
@@ -95,6 +97,7 @@ class Generator(torch.nn.Module):
                     out_channels=config.n_filters,
                     kernel_size=3,
                     padding=1,
+                    bias=False,
                 ),
                 torch.nn.BatchNorm2d(config.n_filters),
             ]
@@ -137,6 +140,7 @@ class SimpleBlock(torch.nn.Module):
             kernel_size=3,
             padding=1,
             stride=stride,
+            bias=False
         )
         self.bn = torch.nn.BatchNorm2d(out_channels)
         self.act = torch.nn.LeakyReLU()
@@ -159,31 +163,31 @@ class Discriminator(torch.nn.Module):
         layers = [
             SimpleBlock(
                 in_channels=config.n_filters,
-                out_channels=config.n_filters * 2,
+                out_channels=config.n_filters,
                 stride=2,
             ),
             SimpleBlock(
-                in_channels=config.n_filters * 2,
+                in_channels=config.n_filters ,
                 out_channels=config.n_filters * 2,
                 stride=1,
             ),
             SimpleBlock(
                 in_channels=config.n_filters * 2,
-                out_channels=config.n_filters * 4,
+                out_channels=config.n_filters * 2,
                 stride=2,
             ),
             SimpleBlock(
-                in_channels=config.n_filters * 4,
+                in_channels=config.n_filters * 2,
                 out_channels=config.n_filters * 4,
                 stride=1,
             ),
             SimpleBlock(
                 in_channels=config.n_filters * 4,
-                out_channels=config.n_filters * 8,
+                out_channels=config.n_filters * 4,
                 stride=2,
             ),
             SimpleBlock(
-                in_channels=config.n_filters * 8,
+                in_channels=config.n_filters * 4,
                 out_channels=config.n_filters * 8,
                 stride=1,
             ),
