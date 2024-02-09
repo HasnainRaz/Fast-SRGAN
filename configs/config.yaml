@@ -3,6 +3,7 @@ experiment:
   seed: 1234
 data:
   image_dir: "/Users/hasnain.raza/Datasets/DIV2K_train_HR"
+  lmdb_path: "div2k_lmdb"
   lr_image_size: 24 
   scale_factor: 4
 generator:
@@ -14,10 +15,11 @@ discriminator:
 vgg:
   feature_layer: 34
 training:
-  pretrain_iterations: 1000 
+  pretrain_iterations: 2000
   iterations: 100000
   device: mps
   log_iter: 100
+  pretrain_log_iter: 100
   batch_size: 24
   num_workers: 10 
   generator_lr: 1e-4

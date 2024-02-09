@@ -34,7 +34,7 @@ class Trainer:
         )
 
         # Loss function for the adversarial players
-        self.loss_fn = torch.nn.MSELoss() 
+        self.loss_fn = torch.nn.BCEWithLogitsLoss() 
         # Loss function for the content loss
         self.l1_loss = torch.nn.SmoothL1Loss()
         # Keep some images in cache for tensorboard
@@ -59,7 +59,7 @@ class Trainer:
 
     def pretrain(self, train_dataloader):
         self._pre_train(train_dataloader, "Pretrain")
-        for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1)):
+        for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1), desc="Pretraining"):
             lr_images, hr_images = lr_images.to(
                 self.config.training.device, non_blocking=True
             ), hr_images.to(self.config.training.device, non_blocking=True)
@@ -73,7 +73,7 @@ class Trainer:
                 loss,
                 global_step=step,
             )
-            if step % 100 == 0:
+            if step % self.config.training.pretrain_log_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
                     fake_hr_images = (1.0 + self.generator(2.0*self.fixed_lr_images - 1.0)) / 2.0
@@ -108,20 +108,19 @@ class Trainer:
         if osp.exists("runs/pretrain.pt"):
             self.generator.load_state_dict(torch.load("runs/pretrain.pt"))
         real_labels = torch.ones((self.config.training.batch_size, 1), device=self.config.training.device)
+        fake_labels = torch.zeros((self.config.training.batch_size, 1), device=self.config.training.device)
         self.generator.train()
         self.discriminator.train()
-        for step, (lr_image, hr_image) in tqdm(enumerate(train_dataloader, start=1)):
+        for step, (lr_image, hr_image) in tqdm(enumerate(train_dataloader, start=1), desc="GAN Training"):
             lr_image, hr_image = lr_image.to(
                 self.config.training.device, non_blocking=True
             ), hr_image.to(self.config.training.device, non_blocking=True)
             self.optim_discriminator.zero_grad()
-            # Get the discriminator loss on real images:
             y_real = self.discriminator(hr_image)
-            # Get the discriminator loss on generated_images:
             fake_hr_images = self.generator(lr_image).detach()
             y_fake = self.discriminator(fake_hr_images)
-            loss_real = self.loss_fn(y_real, y_fake.mean() + real_labels)
-            loss_fake = self.loss_fn(y_fake, y_real.mean() - real_labels)
+            loss_real = self.loss_fn(y_real, real_labels)
+            loss_fake = self.loss_fn(y_fake, fake_labels)
             discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
             discriminator_loss.backward()
             self.optim_discriminator.step()
@@ -139,8 +138,7 @@ class Trainer:
             self.optim_generator.zero_grad()
             fake_hr_images = self.generator(lr_image)
             y_fake = self.discriminator(fake_hr_images)
-            y_real = self.discriminator(hr_image)
-            adv_loss = 0.5 * self.loss_fn(y_fake, y_real.mean() + real_labels) + 0.5 * self.loss_fn(y_real, y_fake.mean() - real_labels)
+            adv_loss = 0.5 * self.loss_fn(y_fake, real_labels)
             self.writer.add_scalar(
                 "Loss/Generator/Adversarial",
                 adv_loss,
