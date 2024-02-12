@@ -1,5 +1,6 @@
 import torch
 from torchvision.models.vgg import vgg19, VGG19_Weights
+from torchvision.models import swin_t, Swin_T_Weights
 
 
 class VGG19(torch.nn.Module):
@@ -91,35 +92,29 @@ class Generator(torch.nn.Module):
         )
 
         self.bottleneck = torch.nn.Sequential(
-            *[
-                torch.nn.Conv2d(
-                    in_channels=config.n_filters,
-                    out_channels=config.n_filters,
-                    kernel_size=3,
-                    padding=1,
-                    bias=False,
-                ),
-                torch.nn.BatchNorm2d(config.n_filters),
-            ]
+            torch.nn.Conv2d(
+                in_channels=config.n_filters,
+                out_channels=config.n_filters,
+                kernel_size=3,
+                padding=1,
+                bias=False,
+            ),
+            torch.nn.BatchNorm2d(config.n_filters),
         )
 
         self.upsampling = torch.nn.Sequential(
-            *[
-                UpSamplingBlock(config),
-                UpSamplingBlock(config),
-            ]
+            UpSamplingBlock(config),
+            UpSamplingBlock(config),
         )
 
         self.head = torch.nn.Sequential(
-            *[
-                torch.nn.Conv2d(
-                    in_channels=config.n_filters,
-                    out_channels=3,
-                    kernel_size=9,
-                    padding=4,
-                ),
-                torch.nn.Tanh(),
-            ]
+            torch.nn.Conv2d(
+                in_channels=config.n_filters,
+                out_channels=3,
+                kernel_size=9,
+                padding=4,
+            ),
+            torch.nn.Tanh(),
         )
 
     def forward(self, x):
@@ -147,6 +142,17 @@ class SimpleBlock(torch.nn.Module):
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))
+
+
+class SwinDiscriminator(torch.nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        self.net = swin_t(weights=Swin_T_Weights.IMAGENET1K_V1)
+        self.net.head = torch.nn.Linear(768, 1)
+
+    def forward(self, x):
+        return self.net(x)
 
 
 class Discriminator(torch.nn.Module):

@@ -8,6 +8,15 @@ import os
 import pickle
 from copy import deepcopy
 from tqdm import tqdm
+import torch
+import numpy as np
+import random
+
+
+def seed(seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 
 def write_images_to_lmdb(image_list, lmdb_path):
@@ -24,6 +33,7 @@ def write_images_to_lmdb(image_list, lmdb_path):
 
 def main():
     config = OmegaConf.load("configs/config.yaml")
+    seed(config.experiment.seed)
     if not os.path.exists(config.data.lmdb_path):
         write_images_to_lmdb([os.path.join(config.data.image_dir, x) for x in os.listdir(config.data.image_dir) if x.endswith(".png")], config.data.lmdb_path)
     train_dataset = LMDBDataset(

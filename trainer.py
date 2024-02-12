@@ -7,7 +7,7 @@ from torchmetrics.functional.image import peak_signal_noise_ratio
 from torchmetrics.functional.image import structural_similarity_index_measure
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from model import Generator, Discriminator, VGG19
+from model import Generator,VGG19, SwinDiscriminator
 
 
 class Trainer:
@@ -17,7 +17,7 @@ class Trainer:
         self.writer = SummaryWriter(log_dir=osp.join("runs", config.experiment.name))
         self.generator = Generator(config=config.generator)
         self.generator.to(self.config.training.device)
-        self.discriminator = Discriminator(config=config.discriminator)
+        self.discriminator = SwinDiscriminator(config=config.discriminator)
         self.discriminator.to(self.config.training.device)
         self.vgg = VGG19(config=config.vgg).to(self.config.training.device)
 
