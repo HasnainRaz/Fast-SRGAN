@@ -144,16 +144,6 @@ class SimpleBlock(torch.nn.Module):
         return self.act(self.bn(self.conv(x)))
 
 
-class SwinDiscriminator(torch.nn.Module):
-
-    def __init__(self, config):
-        super().__init__()
-        self.net = swin_t(weights=Swin_T_Weights.IMAGENET1K_V1)
-        self.net.head = torch.nn.Linear(768, 1)
-
-    def forward(self, x):
-        return self.net(x)
-
 
 class Discriminator(torch.nn.Module):
     def __init__(self, config):
