@@ -1,11 +1,11 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "528d0c8f9536d325ca2cfcb93f5549d3642d6448cd6a2614199c9914ccd80007"
+            "sha256": "9e2502d5d0ff2b754504c0a87bf7c30bd529d9e74844d6296070afa347754511"
         },
         "pipfile-spec": 6,
         "requires": {
-            "python_version": "3.11"
+            "python_version": "3.10"
         },
         "sources": [
             {
@@ -253,11 +253,11 @@
         },
         "imageio": {
             "hashes": [
-                "sha256:78722d40b137bd98f5ec7312119f8aea9ad2049f76f434748eb306b6937cc1ce",
-                "sha256:c5094c48ccf6b2e6da8b4061cd95e1209380afafcbeae4a4e280938cce227e1d"
+                "sha256:08082bf47ccb54843d9c73fe9fc8f3a88c72452ab676b58aca74f36167e8ccba",
+                "sha256:ae9732e10acf807a22c389aef193f42215718e16bd06eed0c5bb57e1034a4d53"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==2.33.1"
+            "version": "==2.34.0"
         },
         "jinja2": {
             "hashes": [
@@ -454,7 +454,7 @@
                 "sha256:f870204a840a60da0b12273ef34f7051e98c3b5961b61b0c2c1be6dfd64fbcd3",
                 "sha256:ffa75af20b44f8dba823498024771d5ac50620e6915abac414251bd971b4529f"
             ],
-            "markers": "python_version >= '3.9'",
+            "markers": "python_version >= '3.10'",
             "version": "==1.26.4"
         },
         "oauthlib": {
@@ -812,11 +812,11 @@
         },
         "setuptools": {
             "hashes": [
-                "sha256:385eb4edd9c9d5c17540511303e39a147ce2fc04bc55289c322b9e5904fe2c05",
-                "sha256:be1af57fc409f93647f2e8e4573a142ed38724b8cdd389706a867bb4efcf1e78"
+                "sha256:850894c4195f09c4ed30dba56213bf7c3f21d86ed6bdaafb5df5972593bfc401",
+                "sha256:c054629b81b946d63a9c6e732bc8b2513a7c3ea645f11d0139a2191d735c60c6"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==69.0.3"
+            "version": "==69.1.0"
         },
         "six": {
             "hashes": [
@@ -861,11 +861,11 @@
         },
         "tifffile": {
             "hashes": [
-                "sha256:40cb48f661acdfea16cb00dc8941bd642b8eb5c59bca6de6a54091bee9ee2699",
-                "sha256:66cf1fbc3fee8f87670ffd415c1e758ea1779376bdfaa9d0dc6ce634e6bc52ea"
+                "sha256:4920a3ec8e8e003e673d3c6531863c99eedd570d1b8b7e141c072ed78ff8030d",
+                "sha256:870998f82fbc94ff7c3528884c1b0ae54863504ff51dbebea431ac3fa8fb7c21"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==2024.1.30"
+            "version": "==2024.2.12"
         },
         "torch": {
             "hashes": [
