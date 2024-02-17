@@ -1,5 +1,5 @@
 experiment:
-  name: "SR"
+  name: "SRGAN"
   seed: 1234
 data:
   image_dir: "/Users/hasnain.raza/Datasets/DIV2K_train_HR"
@@ -8,19 +8,22 @@ data:
   scale_factor: 4
 generator:
   n_filters: 64 
-  n_layers: 16 
+  n_layers: 12
 discriminator:
-  n_filters: 64
+  name: simple
+  n_filters: 64 
   n_layers: 7 
-vgg:
-  feature_layer: 34
+perceptual_network:
+  name: vgg
 training:
-  pretrain_iterations: 2000
+  compiled: false
+  pretrain_iterations: 50000 
   iterations: 100000
   device: mps
-  log_iter: 100
-  pretrain_log_iter: 100
+  log_iter: 5000
+  pretrain_log_iter: 5000
   batch_size: 24
-  num_workers: 10 
+  num_workers: 16
   generator_lr: 1e-4
   discriminator_lr: 1e-4
+

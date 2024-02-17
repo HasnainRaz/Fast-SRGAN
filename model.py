@@ -1,13 +1,13 @@
 import torch
 from torchvision.models.vgg import vgg19, VGG19_Weights
-from torchvision.models import swin_t, Swin_T_Weights
-
+from torchvision.models.convnext import convnext_tiny, ConvNeXt_Tiny_Weights, LayerNorm2d
+from torchvision.models.swin_transformer import swin_t, Swin_T_Weights
 
 class VGG19(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.vgg = vgg19(weights=VGG19_Weights.DEFAULT).features[: config.feature_layer]
+        self.vgg = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features[:34]
         for param in self.vgg.parameters():
             param.requires_grad = False
         self.register_buffer(
@@ -23,6 +23,66 @@ class VGG19(torch.nn.Module):
         x = (x + 1.0) / 2.0
         x = (x - self.mean) / self.std
         return self.vgg(x)
+
+
+class SwinT(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        # 7th Block is the deepest
+        self.net = swin_t(weights=Swin_T_Weights.IMAGENET1K_V1).features[:8]
+        for param in self.net.parameters():
+            param.requires_grad = False
+        self.register_buffer(
+            "mean",
+            torch.tensor([0.485, 0.456, 0.406], requires_grad=False).view(1, 3, 1, 1),
+        )
+        self.register_buffer(
+            "std",
+            torch.tensor([0.229, 0.224, 0.225], requires_grad=False).view(1, 3, 1, 1),
+        )
+
+    def forward(self, x):
+        x = (x + 1.0) / 2.0
+        x = (x - self.mean) / self.std
+        return self.net(x)
+
+
+class ConvNeXt(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        # 7th is the deepest block
+        self.net = convnext_tiny(weights=ConvNeXt_Tiny_Weights.IMAGENET1K_V1).features[:8]
+        for param in self.net.parameters():
+            param.requires_grad = False
+        self.register_buffer(
+            "mean",
+            torch.tensor([0.485, 0.456, 0.406], requires_grad=False).view(1, 3, 1, 1),
+        )
+        self.register_buffer(
+            "std",
+            torch.tensor([0.229, 0.224, 0.225], requires_grad=False).view(1, 3, 1, 1),
+        )
+
+    def forward(self, x):
+        x = (x + 1.0) / 2.0
+        x = (x - self.mean) / self.std
+        return self.net(x)
+
+class PerceptualNetwork(torch.nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        if config.name == "vgg":
+            self.net = VGG19(config)
+        elif config.name == "swin":
+            self.net = SwinT()
+        elif config.name == "convnext":
+            self.net = ConvNeXt()
+
+    def forward(self, x):
+        return self.net(x)
 
 
 class UpSamplingBlock(torch.nn.Module):
@@ -145,7 +205,7 @@ class SimpleBlock(torch.nn.Module):
 
 
 
-class Discriminator(torch.nn.Module):
+class SimpleDiscriminator(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -205,3 +265,45 @@ class Discriminator(torch.nn.Module):
         x = self.neck(x)
         x = self.stem(x).view(-1, self.config.n_filters * 8 * 6 * 6)
         return self.head(x)
+
+
+class SwinDiscriminator(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.net = swin_t(weights=Swin_T_Weights.IMAGENET1K_V1)
+        self.net.head = torch.nn.Linear(768, 1)
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class ConvNeXtDiscriminator(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.net = convnext_tiny(weights=ConvNeXt_Tiny_Weights.IMAGENET1K_V1)
+        self.net.classifier = torch.nn.Sequential(
+            LayerNorm2d(768),
+            torch.nn.Flatten(start_dim=1, end_dim=-1),
+            torch.nn.Linear(768, 1),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class Discriminator(torch.nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        if config.name == "simple":
+            self.net = SimpleDiscriminator(config)
+        elif config.name == "swin":
+            self.net = SwinDiscriminator()
+        elif config.name == "convnext":
+            self.net = ConvNeXtDiscriminator()
+
+    def forward(self, x):
+        return self.net(x)
+

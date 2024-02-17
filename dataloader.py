@@ -3,7 +3,6 @@ import os
 import pickle
 import numpy as np
 import torch
-from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import v2
 from torch.utils.data import Dataset
 
@@ -31,7 +30,7 @@ class LMDBDataset(Dataset):
         
         env = lmdb.open(db_path, subdir=os.path.isdir(db_path), readonly=True, lock=False, readahead=False, meminit=False)
         with env.begin() as txn:
-            self.keys = list(txn.cursor().iternext(values=False))
+            self.keys = sorted(list(txn.cursor().iternext(values=False)))
         env.close()
         self.env = None
         self.txn = None

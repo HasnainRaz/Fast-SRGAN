@@ -1,3 +1,4 @@
+from cv2.aruco import generateImageMarker
 from omegaconf import OmegaConf
 from torch.utils.data import RandomSampler, DataLoader
 from dataloader import DIV2KImage, LMDBDataset
@@ -29,45 +30,70 @@ def write_images_to_lmdb(image_list, lmdb_path):
             key = str(os.path.basename(image_path))
             txn.put(key.encode("ascii"), pickle.dumps(value))
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
 
 
 def main():
     config = OmegaConf.load("configs/config.yaml")
-    seed(config.experiment.seed)
     if not os.path.exists(config.data.lmdb_path):
         write_images_to_lmdb([os.path.join(config.data.image_dir, x) for x in os.listdir(config.data.image_dir) if x.endswith(".png")], config.data.lmdb_path)
-    train_dataset = LMDBDataset(
-        config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor
-    )
-    pretrain_sampler = RandomSampler(
-        train_dataset, replacement=True, num_samples=config.training.pretrain_iterations * config.training.batch_size
-    )
-    train_sampler = RandomSampler(
-        train_dataset, replacement=True, num_samples=config.training.iterations * config.training.batch_size
-    )
-    pretrain_dataloader = DataLoader(
-        train_dataset,
-        sampler=pretrain_sampler,
-        batch_size=config.training.batch_size,
-        num_workers=config.training.num_workers,
-        drop_last=True,
-        persistent_workers=True,
-        pin_memory=True,
-        prefetch_factor=config.training.batch_size,
-    )
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=config.training.batch_size,
-        num_workers=config.training.num_workers,
-        drop_last=True,
-        sampler=train_sampler,
-        pin_memory=True,
-        persistent_workers=True,
-        prefetch_factor=config.training.batch_size,
-    )
-    trainer = Trainer(config)
-    trainer.pretrain(pretrain_dataloader)
-    trainer.train(train_dataloader)
+    g = torch.Generator()
+    g.manual_seed(config.experiment.seed)
+    for discriminator in ("simple", "swin", "convnext"):
+        for perceptual_network in ("vgg", "swin", "convnext"):
+            seed(config.experiment.seed)
+            config.discriminator.name = discriminator
+            config.perceptual_network.name = perceptual_network
+            config.experiment.name = f"{config.discriminator.name}-{config.perceptual_network.name}"
+            train_dataset = LMDBDataset(
+                config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor
+            )
+            pretrain_sampler = RandomSampler(
+                train_dataset, replacement=True, num_samples=config.training.pretrain_iterations * config.training.batch_size, generator=g
+            )
+            train_sampler = RandomSampler(
+                train_dataset, replacement=True, num_samples=config.training.iterations * config.training.batch_size, generator=g
+            )
+            val_dataloader = DataLoader(
+                train_dataset,
+                batch_size=config.training.batch_size,
+                num_workers=config.training.num_workers,
+                drop_last=True,
+                shuffle=False,
+                pin_memory=True,
+                persistent_workers=True,
+                worker_init_fn=seed_worker,
+                generator=g,
+            )
+            pretrain_dataloader = DataLoader(
+                train_dataset,
+                sampler=pretrain_sampler,
+                batch_size=config.training.batch_size,
+                num_workers=config.training.num_workers,
+                drop_last=True,
+                persistent_workers=True,
+                pin_memory=True,
+                generator=g,
+                worker_init_fn=seed_worker,
+            )
+            train_dataloader = DataLoader(
+                train_dataset,
+                batch_size=config.training.batch_size,
+                num_workers=config.training.num_workers,
+                drop_last=True,
+                sampler=train_sampler,
+                pin_memory=True,
+                persistent_workers=True,
+                worker_init_fn=seed_worker,
+                generator=g,
+            )
+            trainer = Trainer(config)
+            trainer.pretrain(pretrain_dataloader, val_dataloader)
+            trainer.train(train_dataloader, val_dataloader)
 
 
 if __name__ == "__main__":
