@@ -1,3 +1,6 @@
 .DS_Store
 __pycache__
 runs
+experiments
+div2k_lmdb
+

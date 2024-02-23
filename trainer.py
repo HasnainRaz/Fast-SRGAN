@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from model import Generator, PerceptualNetwork, Discriminator 
+from model import Generator, VGG19, Discriminator 
 
 
 class Trainer:
@@ -21,7 +21,7 @@ class Trainer:
         self.generator.to(self.config.training.device)
         self.discriminator = Discriminator(config=config.discriminator)
         self.discriminator.to(self.config.training.device)
-        self.perceptual_network = PerceptualNetwork(config=config.perceptual_network).to(self.config.training.device)
+        self.perceptual_network = VGG19().to(self.config.training.device)
         if config.training.compiled and torch.cuda.is_available():
             self.generator = torch.compile(self.generator)
             self.discriminator = torch.compile(self.discriminator)
@@ -121,8 +121,6 @@ class Trainer:
         if Trainer.fixed_lr_images is None:
             self._pre_train_setup(train_dataloader)
             self._log_fixed_images("GAN")
-        real_labels = torch.ones((self.config.training.batch_size, 1), device=self.config.training.device)
-        fake_labels = torch.zeros((self.config.training.batch_size, 1), device=self.config.training.device)
         self.generator.train()
         self.discriminator.train()
         for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1), desc="GAN Training", total=len(train_dataloader)):
@@ -133,8 +131,10 @@ class Trainer:
             y_real = self.discriminator(hr_images)
             sr_images = self.generator(lr_images).detach()
             y_fake = self.discriminator(sr_images)
-            loss_real = self.loss_fn(y_real, real_labels)
-            loss_fake = self.loss_fn(y_fake, fake_labels)
+            real_labels = 0.3 * torch.rand_like(y_real) + 0.7
+            fake_labels = 0.3 * torch.rand_like(y_fake)
+            loss_real = self.loss_fn(y_real, real_labels.to(self.config.training.device))
+            loss_fake = self.loss_fn(y_fake, fake_labels.to(self.config.training.device))
             discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
             discriminator_loss.backward()
             self.optim_discriminator.step()
@@ -152,7 +152,8 @@ class Trainer:
             self.optim_generator.zero_grad()
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
-            adv_loss = 0.5 * self.loss_fn(y_fake, real_labels)
+            real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
+            adv_loss = 0.5 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
             self.writer.add_scalar(
                 "Loss/Generator/Adversarial",
                 adv_loss,

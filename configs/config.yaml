@@ -7,14 +7,12 @@ data:
   lr_image_size: 24 
   scale_factor: 4
 generator:
-  n_filters: 64 
-  n_layers: 12
+  n_filters: 32 
+  n_layers: 7 
 discriminator:
   name: simple
-  n_filters: 64 
+  n_filters: 32 
   n_layers: 7 
-perceptual_network:
-  name: vgg
 training:
   compiled: false
   pretrain_iterations: 50000 
