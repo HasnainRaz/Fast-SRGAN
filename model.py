@@ -40,14 +40,14 @@ class UpSamplingBlock(torch.nn.Module):
         return self.relu(self.phase_shift(self.conv(x)))
 
 
-class InvertedResidualBlock(torch.nn.Module):
+class ResidualBlock(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1, bias=False, groups=in_channels)
+        self.conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = torch.nn.BatchNorm2d(out_channels)
         self.relu1 = torch.nn.PReLU()
-        self.conv2 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv2 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = torch.nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -66,7 +66,7 @@ class Generator(torch.nn.Module):
         )
         self.stem = torch.nn.Sequential(
             *[
-                InvertedResidualBlock(
+                ResidualBlock(
                     in_channels=config.n_filters, out_channels=config.n_filters
                 )
                 for _ in range(config.n_layers)
@@ -124,7 +124,6 @@ class SimpleBlock(torch.nn.Module):
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))
-
 
 
 class Discriminator(torch.nn.Module):
