@@ -1,18 +1,17 @@
 import os.path as osp
 
-
 import torch
-from tqdm import tqdm
-from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 from torch.utils.tensorboard.writer import SummaryWriter
+from torchmetrics.image import (PeakSignalNoiseRatio,
+                                StructuralSimilarityIndexMeasure)
+from tqdm import tqdm
 
-from model import Generator, VGG19, Discriminator 
+from model import VGG19, Discriminator, Generator
 
 
 class Trainer:
-    fixed_lr_images = None 
-    fixed_hr_images = None 
-
+    fixed_lr_images = None
+    fixed_hr_images = None
 
     def __init__(self, config):
         self.config = config
@@ -39,47 +38,54 @@ class Trainer:
         )
 
         # Loss function for the adversarial players
-        self.loss_fn = torch.nn.BCEWithLogitsLoss() 
+        self.loss_fn = torch.nn.BCEWithLogitsLoss()
         # Loss function for the content loss
         self.l1_loss = torch.nn.SmoothL1Loss()
 
         # Metrics for our optimization
-        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0, reduction='none').to(config.training.device)
-        self.psnr = PeakSignalNoiseRatio(data_range=1.0, reduction='none').to(config.training.device)
+        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0, reduction="none").to(
+            config.training.device
+        )
+        self.psnr = PeakSignalNoiseRatio(data_range=1.0, reduction="none").to(
+            config.training.device
+        )
 
-    
     @torch.no_grad
     def _calculate_metrics_over_dataset(self, dataloader, phase, step):
-        self.generator.eval() 
+        self.generator.eval()
         self.ssim.reset()
         self.psnr.reset()
-        for lr_images, hr_images in tqdm(dataloader, desc="Calculating metrics", total=len(dataloader)):
-            lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(self.config.training.device, non_blocking=True)
-            sr_images = (1.0+self.generator(lr_images)) / 2.0
-            self.ssim.update(sr_images, (1.0+hr_images) / 2.0)
-            self.psnr.update(sr_images, (1.0+hr_images) / 2.0)
+        for lr_images, hr_images in tqdm(
+            dataloader, desc="Calculating metrics", total=len(dataloader)
+        ):
+            lr_images, hr_images = lr_images.to(
+                self.config.training.device, non_blocking=True
+            ), hr_images.to(self.config.training.device, non_blocking=True)
+            sr_images = (1.0 + self.generator(lr_images)) / 2.0
+            self.ssim.update(sr_images, (1.0 + hr_images) / 2.0)
+            self.psnr.update(sr_images, (1.0 + hr_images) / 2.0)
         self.writer.add_scalar(f"{phase}/SSIM", self.ssim.compute().mean(), global_step=step)
         self.writer.add_scalar(f"{phase}/PSNR", self.psnr.compute().mean(), global_step=step)
         self.writer.flush()
 
-
-
     def _log_fixed_images(self, phase):
         Trainer.fixed_hr_images = Trainer.fixed_hr_images.to(self.config.training.device)
         Trainer.fixed_lr_images = Trainer.fixed_lr_images.to(self.config.training.device)
-        upsampled_images = torch.nn.functional.interpolate(Trainer.fixed_lr_images.cpu(), scale_factor=4, mode="bicubic", antialias=True).to(self.config.training.device)
+        upsampled_images = torch.nn.functional.interpolate(
+            Trainer.fixed_lr_images.cpu(), scale_factor=4, mode="bicubic", antialias=True
+        ).to(self.config.training.device)
         self.writer.add_images(f"{phase}/HighRes", Trainer.fixed_hr_images, global_step=0)
         self.writer.add_images(f"{phase}/Bicubic", upsampled_images, global_step=0)
 
     @classmethod
     def _pre_train_setup(cls, dataloader):
-        if cls.fixed_lr_images is None: 
+        if cls.fixed_lr_images is None:
             for fixed_lr_images, fixed_hr_images in dataloader:
                 cls.fixed_lr_images = (fixed_lr_images + 1.0) / 2.0
                 cls.fixed_hr_images = (fixed_hr_images + 1.0) / 2.0
                 cls.images_are_set = True
                 break
- 
+
     def pretrain(self, train_dataloader, val_dataloader):
         if osp.exists("runs/pretrain.pt"):
             print("Pretrained model found, skipping pretraining")
@@ -87,10 +93,12 @@ class Trainer:
             self.optim_generator.load_state_dict(torch.load("runs/pretrain.pt")["optimizer"])
             return
         self._calculate_metrics_over_dataset(val_dataloader, "Pretrain", step=0)
-        self._pre_train_setup(val_dataloader) 
+        self._pre_train_setup(val_dataloader)
         self._log_fixed_images("Pretrain")
         step = 0
-        for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1), desc="Pretraining", total=len(train_dataloader)):
+        for step, (lr_images, hr_images) in tqdm(
+            enumerate(train_dataloader, start=1), desc="Pretraining", total=len(train_dataloader)
+        ):
             lr_images, hr_images = lr_images.to(
                 self.config.training.device, non_blocking=True
             ), hr_images.to(self.config.training.device, non_blocking=True)
@@ -107,14 +115,17 @@ class Trainer:
             if step % self.config.training.pretrain_log_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
-                    fake_hr_images = (1.0 + self.generator(2.0*self.fixed_lr_images - 1.0)) / 2.0
+                    fake_hr_images = (1.0 + self.generator(2.0 * self.fixed_lr_images - 1.0)) / 2.0
                 self.writer.add_images(
                     "Pretrain/Generated",
                     fake_hr_images,
                     global_step=step,
                 )
                 self.generator.train()
-        torch.save({"model": self.generator.state_dict(), "optimizer": self.optim_generator.state_dict()}, f"runs/pretrain.pt")
+        torch.save(
+            {"model": self.generator.state_dict(), "optimizer": self.optim_generator.state_dict()},
+            f"runs/pretrain.pt",
+        )
 
     def train(self, train_dataloader, val_dataloader):
         self._calculate_metrics_over_dataset(val_dataloader, "GAN", step=0)
@@ -123,7 +134,9 @@ class Trainer:
             self._log_fixed_images("GAN")
         self.generator.train()
         self.discriminator.train()
-        for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1), desc="GAN Training", total=len(train_dataloader)):
+        for step, (lr_images, hr_images) in tqdm(
+            enumerate(train_dataloader, start=1), desc="GAN Training", total=len(train_dataloader)
+        ):
             lr_images, hr_images = lr_images.to(
                 self.config.training.device, non_blocking=True
             ), hr_images.to(self.config.training.device, non_blocking=True)
@@ -172,11 +185,13 @@ class Trainer:
             generator_loss = 1e-3 * adv_loss + content_loss
             generator_loss.backward()
             self.optim_generator.step()
-            
+
             if step % self.config.training.log_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
-                    generated_sr_image = (1.0 + self.generator(2 * self.fixed_lr_images - 1.0)) / 2.0
+                    generated_sr_image = (
+                        1.0 + self.generator(2 * self.fixed_lr_images - 1.0)
+                    ) / 2.0
                     self.writer.add_images(
                         "GAN/Generated",
                         generated_sr_image,

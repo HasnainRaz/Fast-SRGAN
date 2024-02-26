@@ -1,5 +1,5 @@
 import torch
-from torchvision.models.vgg import vgg19, VGG19_Weights
+from torchvision.models.vgg import VGG19_Weights, vgg19
 
 
 class VGG19(torch.nn.Module):
@@ -44,10 +44,24 @@ class ResidualBlock(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = torch.nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+        )
         self.bn1 = torch.nn.BatchNorm2d(out_channels)
         self.relu1 = torch.nn.PReLU()
-        self.conv2 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = torch.nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+        )
         self.bn2 = torch.nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -59,16 +73,12 @@ class Generator(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.neck = torch.nn.Sequential(
-            torch.nn.Conv2d(
-                in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1
-            ),
+            torch.nn.Conv2d(in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1),
             torch.nn.PReLU(),
         )
         self.stem = torch.nn.Sequential(
             *[
-                ResidualBlock(
-                    in_channels=config.n_filters, out_channels=config.n_filters
-                )
+                ResidualBlock(in_channels=config.n_filters, out_channels=config.n_filters)
                 for _ in range(config.n_layers)
             ]
         )
@@ -117,7 +127,7 @@ class SimpleBlock(torch.nn.Module):
             kernel_size=3,
             padding=1,
             stride=stride,
-            bias=False
+            bias=False,
         )
         self.bn = torch.nn.BatchNorm2d(out_channels)
         self.act = torch.nn.LeakyReLU()
@@ -131,9 +141,7 @@ class Discriminator(torch.nn.Module):
         super().__init__()
         self.config = config
         self.neck = torch.nn.Sequential(
-            torch.nn.Conv2d(
-                in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1
-            ),
+            torch.nn.Conv2d(in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1),
             torch.nn.LeakyReLU(negative_slope=0.2),
         )
 
@@ -144,7 +152,7 @@ class Discriminator(torch.nn.Module):
                 stride=2,
             ),
             SimpleBlock(
-                in_channels=config.n_filters ,
+                in_channels=config.n_filters,
                 out_channels=config.n_filters * 2,
                 stride=1,
             ),
@@ -186,4 +194,3 @@ class Discriminator(torch.nn.Module):
         x = self.neck(x)
         x = self.stem(x).view(-1, self.config.n_filters * 8 * 6 * 6)
         return self.head(x)
-

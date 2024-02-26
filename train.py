@@ -1,17 +1,19 @@
-from omegaconf import OmegaConf
-from torch.utils.data import RandomSampler, DataLoader
-from dataloader import DIV2KImage, LMDBDataset
-from trainer import Trainer
-import lmdb
-import cv2
 import os
 import pickle
-from copy import deepcopy
-from tqdm import tqdm
-import torch
-import numpy as np
 import random
+from copy import deepcopy
 from multiprocessing import Manager
+
+import cv2
+import lmdb
+import numpy as np
+import torch
+from omegaconf import OmegaConf
+from torch.utils.data import DataLoader, RandomSampler
+from tqdm import tqdm
+
+from dataloader import DIV2KImage, LMDBDataset
+from trainer import Trainer
 
 
 def seed(seed):
@@ -30,17 +32,24 @@ def write_images_to_lmdb(image_list, lmdb_path):
             key = str(os.path.basename(image_path))
             txn.put(key.encode("ascii"), pickle.dumps(value))
 
+
 def seed_worker(_):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
 
-
 def main():
     config = OmegaConf.load("configs/config.yaml")
     if not os.path.exists(config.data.lmdb_path):
-        write_images_to_lmdb([os.path.join(config.data.image_dir, x) for x in os.listdir(config.data.image_dir) if x.endswith(".png")], config.data.lmdb_path)
+        write_images_to_lmdb(
+            [
+                os.path.join(config.data.image_dir, x)
+                for x in os.listdir(config.data.image_dir)
+                if x.endswith(".png")
+            ],
+            config.data.lmdb_path,
+        )
     g = torch.Generator()
     g.manual_seed(config.experiment.seed)
     seed(config.experiment.seed)
@@ -50,10 +59,16 @@ def main():
         config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor, shared_cache
     )
     pretrain_sampler = RandomSampler(
-        train_dataset, replacement=True, num_samples=config.training.pretrain_iterations * config.training.batch_size, generator=g
+        train_dataset,
+        replacement=True,
+        num_samples=config.training.pretrain_iterations * config.training.batch_size,
+        generator=g,
     )
     train_sampler = RandomSampler(
-        train_dataset, replacement=True, num_samples=config.training.iterations * config.training.batch_size, generator=g
+        train_dataset,
+        replacement=True,
+        num_samples=config.training.iterations * config.training.batch_size,
+        generator=g,
     )
     val_dataloader = DataLoader(
         train_dataset,
