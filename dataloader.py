@@ -1,4 +1,5 @@
 import lmdb
+import psutil
 import os
 import pickle
 import numpy as np
@@ -21,19 +22,23 @@ class DIV2KImage:
 
 class LMDBDataset(Dataset):
 
-    def __init__(self, db_path, lr_image_size, scale_factor):
+    def __init__(self, db_path, lr_image_size, scale_factor, cache={}):
         self.db_path = db_path
         self.lr_image_size = lr_image_size
         self.hr_image_size = lr_image_size * scale_factor
         self.cropper = v2.RandomCrop((self.hr_image_size, self.hr_image_size))
         self.resize = v2.Resize((self.lr_image_size, self.lr_image_size), antialias=True, interpolation=v2.InterpolationMode.BICUBIC)
-        
+        self.cache = cache 
         env = lmdb.open(db_path, subdir=os.path.isdir(db_path), readonly=True, lock=False, readahead=False, meminit=False)
         with env.begin() as txn:
             self.keys = sorted(list(txn.cursor().iternext(values=False)))
         env.close()
         self.env = None
         self.txn = None
+
+    def _cache_if_not_full(self, key, value):
+        if psutil.virtual_memory().available / 1000000000 > 4:
+            self.cache[value] = key
 
     def _init_db(self):
         self.env = lmdb.open(self.db_path, subdir=os.path.isdir(self.db_path), readonly=True, lock=False, readahead=False, meminit=False)
@@ -43,11 +48,15 @@ class LMDBDataset(Dataset):
         return len(self.keys) 
 
     def __getitem__(self, idx):
+        hr_image = self.cache.get(idx)
+        if hr_image is not None:
+            return hr_image 
         if self.env is None:
             self._init_db()
         file_name = self.keys[idx]
         hr_image = self.txn.get(file_name)
         hr_image = pickle.loads(hr_image).get_image()
+        self._cache_if_not_full(idx, hr_image)
         hr_image = self.cropper(hr_image)
         lr_image = self.resize(hr_image)
 

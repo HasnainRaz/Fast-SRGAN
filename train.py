@@ -11,6 +11,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 import random
+from multiprocessing import Manager
 
 
 def seed(seed):
@@ -43,8 +44,10 @@ def main():
     g = torch.Generator()
     g.manual_seed(config.experiment.seed)
     seed(config.experiment.seed)
+    manager = Manager()
+    shared_cache = manager.dict()
     train_dataset = LMDBDataset(
-        config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor
+        config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor, shared_cache
     )
     pretrain_sampler = RandomSampler(
         train_dataset, replacement=True, num_samples=config.training.pretrain_iterations * config.training.batch_size, generator=g
