@@ -2,7 +2,6 @@ import os
 import pickle
 import random
 from copy import deepcopy
-from multiprocessing import Manager
 
 import cv2
 import lmdb
@@ -53,10 +52,8 @@ def main():
     g = torch.Generator()
     g.manual_seed(config.experiment.seed)
     seed(config.experiment.seed)
-    manager = Manager()
-    shared_cache = manager.dict()
     train_dataset = LMDBDataset(
-        config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor, shared_cache
+        config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor
     )
     pretrain_sampler = RandomSampler(
         train_dataset,

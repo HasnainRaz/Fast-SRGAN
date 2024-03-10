@@ -25,6 +25,7 @@ class Trainer:
             self.generator = torch.compile(self.generator)
             self.discriminator = torch.compile(self.discriminator)
             self.perceptual_network = torch.compile(self.perceptual_network)
+
         # The VGG just provides features, no gradient needed
         self.perceptual_network.eval()
         for p in self.perceptual_network.parameters():

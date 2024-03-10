@@ -3,7 +3,6 @@ import pickle
 
 import lmdb
 import numpy as np
-import psutil
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
@@ -23,7 +22,7 @@ class DIV2KImage:
 
 class LMDBDataset(Dataset):
 
-    def __init__(self, db_path, lr_image_size, scale_factor, cache={}):
+    def __init__(self, db_path, lr_image_size, scale_factor):
         self.db_path = db_path
         self.lr_image_size = lr_image_size
         self.hr_image_size = lr_image_size * scale_factor
@@ -33,7 +32,6 @@ class LMDBDataset(Dataset):
             antialias=True,
             interpolation=v2.InterpolationMode.BICUBIC,
         )
-        self.cache = cache
         env = lmdb.open(
             db_path,
             subdir=os.path.isdir(db_path),
@@ -47,10 +45,6 @@ class LMDBDataset(Dataset):
         env.close()
         self.env = None
         self.txn = None
-
-    def _cache_if_not_full(self, key, value):
-        if psutil.virtual_memory().available / 1000000000 > 4:
-            self.cache[value] = key
 
     def _init_db(self):
         self.env = lmdb.open(
@@ -67,15 +61,11 @@ class LMDBDataset(Dataset):
         return len(self.keys)
 
     def __getitem__(self, idx):
-        hr_image = self.cache.get(idx)
-        if hr_image is not None:
-            return hr_image
         if self.env is None:
             self._init_db()
         file_name = self.keys[idx]
         hr_image = self.txn.get(file_name)
         hr_image = pickle.loads(hr_image).get_image()
-        self._cache_if_not_full(idx, hr_image)
         hr_image = self.cropper(hr_image)
         lr_image = self.resize(hr_image)
 
