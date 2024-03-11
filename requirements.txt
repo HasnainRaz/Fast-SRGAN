@@ -1,3 +1,0 @@
-tensorflow==2.0.3
-opencv-python==4.2.0.32
-numpy==1.22.0
