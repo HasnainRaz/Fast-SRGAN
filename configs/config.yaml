@@ -7,16 +7,15 @@ data:
   lr_image_size: 24 
   scale_factor: 4
 generator:
-  n_filters: 32 
-  n_layers: 7 
+  n_filters: 64
+  n_layers: 12
 discriminator:
-  name: simple
-  n_filters: 32 
-  n_layers: 7 
+  n_filters: 64
+  n_layers: 7
 training:
   compiled: false
-  pretrain_iterations: 50000 
-  iterations: 100000
+  pretrain_iterations: 100 
+  iterations: 100
   device: mps
   log_iter: 5000
   pretrain_log_iter: 5000

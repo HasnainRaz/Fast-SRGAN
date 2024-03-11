@@ -181,16 +181,12 @@ class Discriminator(torch.nn.Module):
                 out_channels=config.n_filters * 8,
                 stride=2,
             ),
+            torch.nn.Conv2d(in_channels=config.n_filters * 8, out_channels=1, kernel_size=1, padding=0, stride=1)
         ]
 
         self.stem = torch.nn.Sequential(*layers)
-        self.head = torch.nn.Sequential(
-            torch.nn.Linear(config.n_filters * 8 * 6 * 6, 1024, bias=True),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(1024, 1, bias=False),
-        )
 
     def forward(self, x):
         x = self.neck(x)
-        x = self.stem(x).view(-1, self.config.n_filters * 8 * 6 * 6)
-        return self.head(x)
+        return self.stem(x)
+ 

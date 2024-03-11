@@ -167,7 +167,7 @@ class Trainer:
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
-            adv_loss = 0.5 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
+            adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
             self.writer.add_scalar(
                 "Loss/Generator/Adversarial",
                 adv_loss,
@@ -183,7 +183,7 @@ class Trainer:
                 global_step=step,
             )
             # Train the generator
-            generator_loss = 1e-3 * adv_loss + content_loss
+            generator_loss = 0.5 * adv_loss + 0.5 * content_loss
             generator_loss.backward()
             self.optim_generator.step()
 
