@@ -3,4 +3,5 @@ __pycache__
 runs
 experiments
 div2k_lmdb
-
+outputs
+model_timing.py

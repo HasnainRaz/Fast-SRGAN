@@ -5,9 +5,9 @@ from copy import deepcopy
 
 import cv2
 import lmdb
+import hydra
 import numpy as np
 import torch
-from omegaconf import OmegaConf
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 
@@ -38,8 +38,8 @@ def seed_worker(_):
     random.seed(worker_seed)
 
 
-def main():
-    config = OmegaConf.load("configs/config.yaml")
+@hydra.main(version_base="1.1", config_path="configs", config_name="config")
+def main(config):
     if not os.path.exists(config.data.lmdb_path):
         write_images_to_lmdb(
             [

@@ -52,7 +52,7 @@ class ResidualBlock(torch.nn.Module):
             padding=1,
             bias=False,
         )
-        self.bn1 = torch.nn.BatchNorm2d(out_channels)
+        self.bn1 = torch.nn.InstanceNorm2d(out_channels)
         self.relu1 = torch.nn.PReLU()
         self.conv2 = torch.nn.Conv2d(
             in_channels=in_channels,
@@ -62,7 +62,7 @@ class ResidualBlock(torch.nn.Module):
             padding=1,
             bias=False,
         )
-        self.bn2 = torch.nn.BatchNorm2d(out_channels)
+        self.bn2 = torch.nn.InstanceNorm2d(out_channels)
 
     def forward(self, x):
         y = self.relu1(self.bn1(self.conv1(x)))
@@ -91,7 +91,7 @@ class Generator(torch.nn.Module):
                 padding=1,
                 bias=False,
             ),
-            torch.nn.BatchNorm2d(config.n_filters),
+            torch.nn.InstanceNorm2d(config.n_filters),
         )
 
         self.upsampling = torch.nn.Sequential(
@@ -129,7 +129,7 @@ class SimpleBlock(torch.nn.Module):
             stride=stride,
             bias=False,
         )
-        self.bn = torch.nn.BatchNorm2d(out_channels)
+        self.bn = torch.nn.InstanceNorm2d(out_channels)
         self.act = torch.nn.LeakyReLU()
 
     def forward(self, x):
