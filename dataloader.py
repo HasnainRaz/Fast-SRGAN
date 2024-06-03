@@ -1,75 +1,34 @@
-import os
-import pickle
+import random
 
-import lmdb
-import numpy as np
 import torch
+import numpy as np
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 
 
-class DIV2KImage:
+class NumpyImagesDataset(Dataset):
 
-    def __init__(self, image):
-        self.channels = 3
-        self.size = image.shape[:2]
-        self.image = image.tobytes()
-
-    def get_image(self):
-        image = np.frombuffer(self.image, dtype=np.uint8)
-        return torch.from_numpy(image.copy().reshape(*self.size, 3)).permute(2, 0, 1)
-
-
-class LMDBDataset(Dataset):
-
-    def __init__(self, db_path, lr_image_size, scale_factor):
-        self.db_path = db_path
+    def __init__(self, numpy_paths, lr_image_size, scale_factor):
+        self.numpy_paths = numpy_paths
         self.lr_image_size = lr_image_size
         self.hr_image_size = lr_image_size * scale_factor
-        self.cropper = v2.RandomCrop((self.hr_image_size, self.hr_image_size))
         self.resize = v2.Resize(
             (self.lr_image_size, self.lr_image_size),
             antialias=True,
             interpolation=v2.InterpolationMode.BICUBIC,
         )
-        env = lmdb.open(
-            db_path,
-            subdir=os.path.isdir(db_path),
-            readonly=True,
-            lock=False,
-            readahead=False,
-            meminit=False,
-        )
-        with env.begin() as txn:
-            self.keys = sorted(list(txn.cursor().iternext(values=False)))
-        env.close()
-        self.env = None
-        self.txn = None
-
-    def _init_db(self):
-        self.env = lmdb.open(
-            self.db_path,
-            subdir=os.path.isdir(self.db_path),
-            readonly=True,
-            lock=False,
-            readahead=False,
-            meminit=False,
-        )
-        self.txn = self.env.begin()
 
     def __len__(self):
-        return len(self.keys)
+        return len(self.numpy_paths)
 
     def __getitem__(self, idx):
-        if self.env is None:
-            self._init_db()
-        file_name = self.keys[idx]
-        hr_image = self.txn.get(file_name)
-        hr_image = pickle.loads(hr_image).get_image()
-        hr_image = self.cropper(hr_image)
+        image = np.load(self.numpy_paths[idx], mmap_mode="c")
+        _, h, w = image.shape
+        crop_h, crop_w = random.randint(0, h - self.hr_image_size), random.randint(0, w - self.hr_image_size)
+        hr_image = image[:, crop_h : crop_h + self.hr_image_size, crop_w : crop_w + self.hr_image_size]
+        hr_image = torch.tensor(hr_image, dtype=torch.float32)
         lr_image = self.resize(hr_image)
 
-        hr_image = (hr_image.float() / 127.5) - 1.0
-        lr_image = (lr_image.float() / 127.5) - 1.0
+        hr_image = (hr_image / 127.5) - 1.0
+        lr_image = (lr_image / 127.5) - 1.0
         return lr_image, hr_image
-

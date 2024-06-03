@@ -2,8 +2,8 @@ experiment:
   name: "SRGAN"
   seed: 1234
 data:
-  image_dir: "/Users/hasnain.raza/Datasets/DIV2K_train_HR"
-  lmdb_path: "div2k_lmdb"
+  image_dir: "/Users/hasnain.raza/Datasets/DIV2K"
+  numpy_dir: "/Users/hasnain.raza/Datasets/div2k_np"
   lr_image_size: 24 
   scale_factor: 4
 generator:

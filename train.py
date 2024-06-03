@@ -1,17 +1,14 @@
 import os
-import pickle
 import random
-from copy import deepcopy
 
-import cv2
-import lmdb
 import hydra
 import numpy as np
 import torch
+from PIL import Image
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 
-from dataloader import DIV2KImage, LMDBDataset
+from dataloader import NumpyImagesDataset
 from trainer import Trainer
 
 
@@ -21,15 +18,14 @@ def seed(seed):
     random.seed(seed)
 
 
-def write_images_to_lmdb(image_list, lmdb_path):
-    env = lmdb.open(lmdb_path, map_size=int(20e9))
-    with env.begin(write=True) as txn:
-        for image_path in tqdm(image_list, desc="Writing LMDB"):
-            image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            value = DIV2KImage(deepcopy(image))
-            key = str(os.path.basename(image_path))
-            txn.put(key.encode("ascii"), pickle.dumps(value))
+def write_images_to_numpy_arrays(image_list, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    for image_path in tqdm(image_list, desc="Converting images to Numpy"):
+        file_name = os.path.basename(image_path).replace(".png", "")
+        image = Image.open(image_path).convert("RGB")
+        image = np.array(image).astype(np.uint8)
+        image = np.transpose(image, (2, 0, 1))
+        np.save(os.path.join(output_dir, file_name), image)
 
 
 def seed_worker(_):
@@ -40,21 +36,19 @@ def seed_worker(_):
 
 @hydra.main(version_base="1.1", config_path="configs", config_name="config")
 def main(config):
-    if not os.path.exists(config.data.lmdb_path):
-        write_images_to_lmdb(
-            [
-                os.path.join(config.data.image_dir, x)
-                for x in os.listdir(config.data.image_dir)
-                if x.endswith(".png")
-            ],
-            config.data.lmdb_path,
+    if not os.path.exists(config.data.numpy_dir):
+        write_images_to_numpy_arrays(
+            [os.path.join(config.data.image_dir, x) for x in os.listdir(config.data.image_dir) if x.endswith(".png")],
+            config.data.numpy_dir,
         )
     g = torch.Generator()
     g.manual_seed(config.experiment.seed)
     seed(config.experiment.seed)
-    train_dataset = LMDBDataset(
-        config.data.lmdb_path, config.data.lr_image_size, config.data.scale_factor
-    )
+
+    numpy_files = [
+        os.path.join(config.data.numpy_dir, x) for x in os.listdir(config.data.numpy_dir) if x.endswith(".npy")
+    ]
+    train_dataset = NumpyImagesDataset(numpy_files, config.data.lr_image_size, config.data.scale_factor)
     pretrain_sampler = RandomSampler(
         train_dataset,
         replacement=True,

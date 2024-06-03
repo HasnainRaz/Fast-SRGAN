@@ -2,8 +2,7 @@ import os.path as osp
 
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
-from torchmetrics.image import (PeakSignalNoiseRatio,
-                                StructuralSimilarityIndexMeasure)
+from torchmetrics.image import PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
 from tqdm import tqdm
 
 from model import VGG19, Discriminator, Generator
@@ -31,9 +30,7 @@ class Trainer:
         for p in self.perceptual_network.parameters():
             p.requires_grad = False
 
-        self.optim_generator = torch.optim.AdamW(
-            self.generator.parameters(), lr=self.config.training.generator_lr
-        )
+        self.optim_generator = torch.optim.AdamW(self.generator.parameters(), lr=self.config.training.generator_lr)
         self.optim_discriminator = torch.optim.AdamW(
             self.discriminator.parameters(), lr=self.config.training.discriminator_lr
         )
@@ -44,24 +41,18 @@ class Trainer:
         self.l1_loss = torch.nn.SmoothL1Loss()
 
         # Metrics for our optimization
-        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0, reduction="none").to(
-            config.training.device
-        )
-        self.psnr = PeakSignalNoiseRatio(data_range=1.0, reduction="none").to(
-            config.training.device
-        )
+        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0, reduction="none").to(config.training.device)
+        self.psnr = PeakSignalNoiseRatio(data_range=1.0, reduction="none").to(config.training.device)
 
     @torch.no_grad
     def _calculate_metrics_over_dataset(self, dataloader, phase, step):
         self.generator.eval()
         self.ssim.reset()
         self.psnr.reset()
-        for lr_images, hr_images in tqdm(
-            dataloader, desc="Calculating metrics", total=len(dataloader)
-        ):
-            lr_images, hr_images = lr_images.to(
+        for lr_images, hr_images in tqdm(dataloader, desc="Calculating metrics", total=len(dataloader)):
+            lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(
                 self.config.training.device, non_blocking=True
-            ), hr_images.to(self.config.training.device, non_blocking=True)
+            )
             sr_images = (1.0 + self.generator(lr_images)) / 2.0
             self.ssim.update(sr_images, (1.0 + hr_images) / 2.0)
             self.psnr.update(sr_images, (1.0 + hr_images) / 2.0)
@@ -100,9 +91,9 @@ class Trainer:
         for step, (lr_images, hr_images) in tqdm(
             enumerate(train_dataloader, start=1), desc="Pretraining", total=len(train_dataloader)
         ):
-            lr_images, hr_images = lr_images.to(
+            lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(
                 self.config.training.device, non_blocking=True
-            ), hr_images.to(self.config.training.device, non_blocking=True)
+            )
             self.optim_generator.zero_grad()
             fake_hr_images = self.generator(lr_images)
             loss = self.l1_loss(fake_hr_images, hr_images)
@@ -138,9 +129,9 @@ class Trainer:
         for step, (lr_images, hr_images) in tqdm(
             enumerate(train_dataloader, start=1), desc="GAN Training", total=len(train_dataloader)
         ):
-            lr_images, hr_images = lr_images.to(
+            lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(
                 self.config.training.device, non_blocking=True
-            ), hr_images.to(self.config.training.device, non_blocking=True)
+            )
             self.optim_discriminator.zero_grad()
             y_real = self.discriminator(hr_images)
             sr_images = self.generator(lr_images).detach()
@@ -190,9 +181,7 @@ class Trainer:
             if step % self.config.training.log_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
-                    generated_sr_image = (
-                        1.0 + self.generator(2 * self.fixed_lr_images - 1.0)
-                    ) / 2.0
+                    generated_sr_image = (1.0 + self.generator(2 * self.fixed_lr_images - 1.0)) / 2.0
                     self.writer.add_images(
                         "GAN/Generated",
                         generated_sr_image,

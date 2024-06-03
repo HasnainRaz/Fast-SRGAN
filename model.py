@@ -181,7 +181,7 @@ class Discriminator(torch.nn.Module):
                 out_channels=config.n_filters * 8,
                 stride=2,
             ),
-            torch.nn.Conv2d(in_channels=config.n_filters * 8, out_channels=1, kernel_size=1, padding=0, stride=1)
+            torch.nn.Conv2d(in_channels=config.n_filters * 8, out_channels=1, kernel_size=1, padding=0, stride=1),
         ]
 
         self.stem = torch.nn.Sequential(*layers)
@@ -189,4 +189,3 @@ class Discriminator(torch.nn.Module):
     def forward(self, x):
         x = self.neck(x)
         return self.stem(x)
- 
