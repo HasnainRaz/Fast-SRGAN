@@ -9,8 +9,8 @@ from model import VGG19, Discriminator, Generator
 
 
 class Trainer:
-    fixed_lr_images = None
-    fixed_hr_images = None
+    fixed_lr_images = torch.tensor([]) 
+    fixed_hr_images = torch.tensor([])
 
     def __init__(self, config):
         self.config = config
@@ -71,7 +71,7 @@ class Trainer:
 
     @classmethod
     def _pre_train_setup(cls, dataloader):
-        if cls.fixed_lr_images is None:
+        if cls.fixed_lr_images.ndim == 1:
             for fixed_lr_images, fixed_hr_images in dataloader:
                 cls.fixed_lr_images = (fixed_lr_images + 1.0) / 2.0
                 cls.fixed_hr_images = (fixed_hr_images + 1.0) / 2.0
@@ -99,12 +99,14 @@ class Trainer:
             loss = self.l1_loss(fake_hr_images, hr_images)
             loss.backward()
             self.optim_generator.step()
-            self.writer.add_scalar(
-                "Pretrain/Loss",
-                loss,
-                global_step=step,
-            )
-            if step % self.config.training.pretrain_log_iter == 0:
+
+            if step % self.config.training.log_iter == 0:
+                self.writer.add_scalar(
+                    "Pretrain/Loss",
+                    loss,
+                    global_step=step,
+                )
+            if step % self.config.training.checkpoint_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
                     fake_hr_images = (1.0 + self.generator(2.0 * self.fixed_lr_images - 1.0)) / 2.0
@@ -113,11 +115,19 @@ class Trainer:
                     fake_hr_images,
                     global_step=step,
                 )
+                self._calculate_metrics_over_dataset(val_dataloader, "Pretrain", step)
                 self.generator.train()
         torch.save(
             {"model": self.generator.state_dict(), "optimizer": self.optim_generator.state_dict()},
             f"runs/pretrain.pt",
         )
+
+    def save_checkpoints(self, step):
+        save_dir = osp.join("runs", self.config.experiment.name)
+        torch.save(self.generator.state_dict(), osp.join(save_dir, f"generator_epoch_{step}.pt"))
+        torch.save(self.discriminator.state_dict(), osp.join(save_dir, f"discriminator_epoch_{step}.pt"))
+        torch.save(self.optim_generator.state_dict(), osp.join(save_dir, f"generator_optim_epoch_{step}.pt"))
+        torch.save(self.optim_discriminator.state_dict(), osp.join(save_dir, f"discriminator_optim_epoch_{step}.pt"))
 
     def train(self, train_dataloader, val_dataloader):
         self._calculate_metrics_over_dataset(val_dataloader, "GAN", step=0)
@@ -136,49 +146,52 @@ class Trainer:
             y_real = self.discriminator(hr_images)
             sr_images = self.generator(lr_images).detach()
             y_fake = self.discriminator(sr_images)
-            real_labels = 0.3 * torch.rand_like(y_real) + 0.7
+            real_labels = 0.3 * torch.rand_like(y_real) + 0.8
             fake_labels = 0.3 * torch.rand_like(y_fake)
             loss_real = self.loss_fn(y_real, real_labels.to(self.config.training.device))
             loss_fake = self.loss_fn(y_fake, fake_labels.to(self.config.training.device))
             discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
             discriminator_loss.backward()
             self.optim_discriminator.step()
-            self.writer.add_scalar(
-                "Loss/Discriminator/Real",
-                loss_real,
-                global_step=step,
-            )
-            self.writer.add_scalar(
-                "Loss/Discriminator/Fake",
-                loss_fake,
-                global_step=step,
-            )
+
             # Get the adv loss for the generator
             self.optim_generator.zero_grad()
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
             adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
-            self.writer.add_scalar(
-                "Loss/Generator/Adversarial",
-                adv_loss,
-                global_step=step,
-            )
-            # Get the content loss for the generator
+                        # Get the content loss for the generator
             fake_features = self.perceptual_network(sr_images)
             real_features = self.perceptual_network(hr_images)
             content_loss = self.l1_loss(fake_features, real_features)
-            self.writer.add_scalar(
-                "Loss/Generator/Content",
-                content_loss,
-                global_step=step,
-            )
             # Train the generator
             generator_loss = 0.5 * adv_loss + 0.5 * content_loss
             generator_loss.backward()
             self.optim_generator.step()
 
             if step % self.config.training.log_iter == 0:
+                self.writer.add_scalar(
+                    "Loss/Discriminator/Real",
+                    loss_real,
+                    global_step=step,
+                )
+                self.writer.add_scalar(
+                    "Loss/Discriminator/Fake",
+                    loss_fake,
+                    global_step=step,
+                )
+                self.writer.add_scalar(
+                    "Loss/Generator/Adversarial",
+                    adv_loss,
+                    global_step=step,
+                )
+                self.writer.add_scalar(
+                    "Loss/Generator/Content",
+                    content_loss,
+                    global_step=step,
+                )
+
+            if step % self.config.training.checkpoint_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
                     generated_sr_image = (1.0 + self.generator(2 * self.fixed_lr_images - 1.0)) / 2.0
@@ -188,21 +201,6 @@ class Trainer:
                         global_step=step,
                     )
                     self._calculate_metrics_over_dataset(val_dataloader, "GAN", step=step)
+                self.save_checkpoints(step)
                 self.generator.train()
-                save_dir = osp.join("runs", self.config.experiment.name)
-                torch.save(
-                    self.generator.state_dict(),
-                    osp.join(save_dir, f"generator_epoch_{step}.pt"),
-                )
-                torch.save(
-                    self.discriminator.state_dict(),
-                    osp.join(save_dir, f"discriminator_epoch_{step}.pt"),
-                )
-                torch.save(
-                    self.optim_generator.state_dict(),
-                    osp.join(save_dir, f"generator_optim_{step}.pt"),
-                )
-                torch.save(
-                    self.optim_discriminator.state_dict(),
-                    osp.join(save_dir, f"discriminator_optim_{step}.pt"),
-                )
+

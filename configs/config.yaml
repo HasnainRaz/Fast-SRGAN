@@ -18,7 +18,7 @@ training:
   iterations: 100
   device: mps
   log_iter: 5000
-  pretrain_log_iter: 5000
+  checkpoint_iter: 5000
   batch_size: 24
   num_workers: 16
   generator_lr: 1e-4
