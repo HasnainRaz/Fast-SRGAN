@@ -1,5 +1,6 @@
 import os
 import random
+from concurrent.futures import ThreadPoolExecutor
 
 import hydra
 import numpy as np
@@ -20,12 +21,20 @@ def seed(seed):
 
 def write_images_to_numpy_arrays(image_list, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-    for image_path in tqdm(image_list, desc="Converting images to Numpy"):
-        file_name = os.path.basename(image_path).replace(".png", "")
+    
+    def _write_image_to_numpy(image_path, numpy_path):
         image = Image.open(image_path).convert("RGB")
         image = np.array(image).astype(np.uint8)
         image = np.transpose(image, (2, 0, 1))
-        np.save(os.path.join(output_dir, file_name), image)
+        np.save(numpy_path, image)
+        pbar.update(1)
+
+    with tqdm(total=len(image_list)) as pbar:
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            for image_path in image_list:
+                file_name = os.path.basename(image_path).replace(".png", "")
+                numpy_path = os.path.join(output_dir, file_name)
+                executor.submit(_write_image_to_numpy, image_path, numpy_path)
 
 
 def seed_worker(_):
