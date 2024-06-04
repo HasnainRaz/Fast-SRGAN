@@ -1,7 +1,7 @@
 import random
 
-import torch
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 

@@ -9,7 +9,7 @@ from model import VGG19, Discriminator, Generator
 
 
 class Trainer:
-    fixed_lr_images = torch.tensor([]) 
+    fixed_lr_images = torch.tensor([])
     fixed_hr_images = torch.tensor([])
 
     def __init__(self, config):
@@ -160,7 +160,7 @@ class Trainer:
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
             adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
-                        # Get the content loss for the generator
+            # Get the content loss for the generator
             fake_features = self.perceptual_network(sr_images)
             real_features = self.perceptual_network(hr_images)
             content_loss = self.l1_loss(fake_features, real_features)
@@ -203,4 +203,3 @@ class Trainer:
                     self._calculate_metrics_over_dataset(val_dataloader, "GAN", step=step)
                 self.save_checkpoints(step)
                 self.generator.train()
-

@@ -21,7 +21,7 @@ def seed(seed):
 
 def write_images_to_numpy_arrays(image_list, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-    
+
     def _write_image_to_numpy(image_path, numpy_path):
         image = Image.open(image_path).convert("RGB")
         image = np.array(image).astype(np.uint8)
