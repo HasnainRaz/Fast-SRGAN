@@ -94,7 +94,7 @@ class Trainer:
             lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(
                 self.config.training.device, non_blocking=True
             )
-            self.optim_generator.zero_grad()
+            self.optim_generator.zero_grad(set_to_none=True)
             fake_hr_images = self.generator(lr_images)
             loss = self.l1_loss(fake_hr_images, hr_images)
             loss.backward()
@@ -142,7 +142,7 @@ class Trainer:
             lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(
                 self.config.training.device, non_blocking=True
             )
-            self.optim_discriminator.zero_grad()
+            self.optim_discriminator.zero_grad(set_to_none=True)
             y_real = self.discriminator(hr_images)
             sr_images = self.generator(lr_images).detach()
             y_fake = self.discriminator(sr_images)
@@ -155,7 +155,7 @@ class Trainer:
             self.optim_discriminator.step()
 
             # Get the adv loss for the generator
-            self.optim_generator.zero_grad()
+            self.optim_generator.zero_grad(set_to_none=True)
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
