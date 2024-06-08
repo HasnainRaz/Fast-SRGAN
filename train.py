@@ -29,7 +29,7 @@ def write_images_to_numpy_arrays(image_list, output_dir):
         np.save(numpy_path, image)
         pbar.update(1)
 
-    with tqdm(total=len(image_list), desc="Coverting images") as pbar:
+    with tqdm(total=len(image_list)) as pbar:
         with ThreadPoolExecutor(max_workers=16) as executor:
             for image_path in image_list:
                 file_name = os.path.basename(image_path).replace(".png", "")

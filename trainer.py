@@ -142,29 +142,27 @@ class Trainer:
             lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(
                 self.config.training.device, non_blocking=True
             )
-            self.optim_discriminator.zero_grad(set_to_none=True)
+            self.optim_discriminator.zero_grad()
+            y_real = self.discriminator(hr_images)
             sr_images = self.generator(lr_images).detach()
-            stacked_images = torch.cat([hr_images, sr_images], dim=0)
-            stacked_pred = self.discriminator(stacked_images)
-            labels = torch.rand_like(stacked_pred)
-            real_labels, fake_labels = torch.split(labels, self.config.training.batch_size, dim=0)
-            real_labels = 0.3 * real_labels + 0.7
-            fake_labels = 0.3 * fake_labels 
-            stacked_labels = torch.cat([real_labels, fake_labels], dim=0)
-            discriminator_loss = self.loss_fn(stacked_pred, stacked_labels)
+            y_fake = self.discriminator(sr_images)
+            real_labels = 0.3 * torch.rand_like(y_real) + 0.8
+            fake_labels = 0.3 * torch.rand_like(y_fake)
+            loss_real = self.loss_fn(y_real, real_labels.to(self.config.training.device))
+            loss_fake = self.loss_fn(y_fake, fake_labels.to(self.config.training.device))
+            discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
             discriminator_loss.backward()
             self.optim_discriminator.step()
 
             # Get the adv loss for the generator
-            self.optim_generator.zero_grad(set_to_none=True)
+            self.optim_generator.zero_grad()
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
-            adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels)
+            adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
             # Get the content loss for the generator
-            stacked_images = torch.cat([hr_images, sr_images], dim=0)
-            features = self.perceptual_network(stacked_images)
-            real_features, fake_features = torch.split(features, self.config.training.batch_size, dim=0)
+            fake_features = self.perceptual_network(sr_images)
+            real_features = self.perceptual_network(hr_images)
             content_loss = self.l1_loss(fake_features, real_features)
             # Train the generator
             generator_loss = 0.5 * adv_loss + 0.5 * content_loss
