@@ -130,7 +130,7 @@ class Trainer:
             loss.backward()
             self.optim_discriminator.step()
 
-            if step % self.config.training.checkpoint_iter == 0:
+            if step % self.config.training.log_iter == 0:
                 self.writer.add_scalar("Pretrain/Discriminator/Loss", loss.item(), global_step=step)
 
         torch.save(
