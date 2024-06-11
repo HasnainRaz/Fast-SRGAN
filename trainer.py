@@ -30,9 +30,9 @@ class Trainer:
         for p in self.perceptual_network.parameters():
             p.requires_grad = False
 
-        self.optim_generator = torch.optim.AdamW(self.generator.parameters(), lr=self.config.training.generator_lr)
+        self.optim_generator = torch.optim.AdamW(self.generator.parameters(), lr=self.config.training.generator_lr, fused=True)
         self.optim_discriminator = torch.optim.AdamW(
-            self.discriminator.parameters(), lr=self.config.training.discriminator_lr
+            self.discriminator.parameters(), lr=self.config.training.discriminator_lr, fused=True
         )
 
         # Loss function for the adversarial players
@@ -95,8 +95,9 @@ class Trainer:
                 self.config.training.device, non_blocking=True
             )
             self.optim_generator.zero_grad(set_to_none=True)
-            fake_hr_images = self.generator(lr_images)
-            loss = self.l1_loss(fake_hr_images, hr_images)
+            with torch.autocast(device_type=self.config.training.device, dtype=torch.float16):
+                fake_hr_images = self.generator(lr_images)
+                loss = self.l1_loss(fake_hr_images, hr_images)
             loss.backward()
             self.optim_generator.step()
 
@@ -143,29 +144,31 @@ class Trainer:
                 self.config.training.device, non_blocking=True
             )
             self.optim_discriminator.zero_grad(set_to_none=True)
-            y_real = self.discriminator(hr_images)
-            sr_images = self.generator(lr_images).detach()
-            y_fake = self.discriminator(sr_images)
-            real_labels = 0.3 * torch.rand_like(y_real) + 0.8
-            fake_labels = 0.3 * torch.rand_like(y_fake)
-            loss_real = self.loss_fn(y_real, real_labels.to(self.config.training.device))
-            loss_fake = self.loss_fn(y_fake, fake_labels.to(self.config.training.device))
-            discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
+            with torch.autocast(device_type=self.config.training.device, dtype=torch.float16):
+                y_real = self.discriminator(hr_images)
+                sr_images = self.generator(lr_images).detach()
+                y_fake = self.discriminator(sr_images)
+                real_labels = 0.3 * torch.rand_like(y_real) + 0.8
+                fake_labels = 0.3 * torch.rand_like(y_fake)
+                loss_real = self.loss_fn(y_real, real_labels.to(self.config.training.device))
+                loss_fake = self.loss_fn(y_fake, fake_labels.to(self.config.training.device))
+                discriminator_loss = 0.5 * loss_real + 0.5 * loss_fake
             discriminator_loss.backward()
             self.optim_discriminator.step()
 
             # Get the adv loss for the generator
             self.optim_generator.zero_grad(set_to_none=True)
-            sr_images = self.generator(lr_images)
-            y_fake = self.discriminator(sr_images)
-            real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
-            adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
-            # Get the content loss for the generator
-            fake_features = self.perceptual_network(sr_images)
-            real_features = self.perceptual_network(hr_images)
-            content_loss = self.l1_loss(fake_features, real_features)
-            # Train the generator
-            generator_loss = 0.5 * adv_loss + 0.5 * content_loss
+            with torch.autocast(device_type=self.config.training.device, dtype=torch.float16):
+                sr_images = self.generator(lr_images)
+                y_fake = self.discriminator(sr_images)
+                real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
+                adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
+                # Get the content loss for the generator
+                fake_features = self.perceptual_network(sr_images)
+                real_features = self.perceptual_network(hr_images)
+                content_loss = self.l1_loss(fake_features, real_features)
+                # Train the generator
+                generator_loss = 0.5 * adv_loss + 0.5 * content_loss
             generator_loss.backward()
             self.optim_generator.step()
 
