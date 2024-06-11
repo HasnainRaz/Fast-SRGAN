@@ -119,7 +119,7 @@ class Trainer:
                 self.generator.train()
 
         self.discriminator.train()
-        for step, (lr_images, hr_images) in tqdm(train_dataloader, start=1, total=len(train_dataloader), desc="Pretraining Disc"):
+        for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1), total=len(train_dataloader), desc="Pretraining Disc"):
             lr_images, hr_images = lr_images.to(self.config.training.device, nonblocking=True), hr_images.to(self.config.training.device, nonblocking=True)
             with torch.no_grad():
                 sr_images = self.generator(lr_images)
