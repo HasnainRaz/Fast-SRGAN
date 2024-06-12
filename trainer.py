@@ -96,14 +96,23 @@ class Trainer:
             )
             self.optim_generator.zero_grad(set_to_none=True)
             fake_hr_images = self.generator(lr_images)
-            loss = self.l1_loss(fake_hr_images, hr_images)
-            loss.backward()
+            gen_loss = self.l1_loss(fake_hr_images, hr_images)
+            gen_loss.backward()
             self.optim_generator.step()
 
+            self.optim_discriminator.zero_grad(set_to_none=True)
+            sr_pred = self.discriminator(fake_hr_images.detach())
+            hr_pred = self.discriminator(hr_images)
+            disc_loss = 0.5 * self.loss_fn(sr_pred, torch.zeros_like(sr_pred)) + 0.5 * self.loss_fn(hr_pred, torch.ones_like(hr_pred))
+            disc_loss.backward()
+            self.optim_discriminator.step()
+
+
             if step % self.config.training.log_iter == 0:
+                self.writer.add_scalar("Pretrain/Discriminator/Loss", disc_loss.item(), global_step=step)
                 self.writer.add_scalar(
-                    "Pretrain/Loss",
-                    loss,
+                    "Pretrain/Generator/Loss",
+                    gen_loss,
                     global_step=step,
                 )
             if step % self.config.training.checkpoint_iter == 0:
@@ -117,21 +126,6 @@ class Trainer:
                 )
                 self._calculate_metrics_over_dataset(val_dataloader, "Pretrain", step)
                 self.generator.train()
-
-        self.discriminator.train()
-        for step, (lr_images, hr_images) in tqdm(enumerate(train_dataloader, start=1), total=len(train_dataloader), desc="Pretraining Disc"):
-            lr_images, hr_images = lr_images.to(self.config.training.device, non_blocking=True), hr_images.to(self.config.training.device, non_blocking=True)
-            with torch.no_grad():
-                sr_images = self.generator(lr_images)
-            self.optim_discriminator.zero_grad(set_to_none=True)
-            sr_pred = self.discriminator(sr_images)
-            hr_pred = self.discriminator(hr_images)
-            loss = 0.5 * self.loss_fn(sr_pred, torch.zeros_like(sr_pred)) + 0.5 * self.loss_fn(hr_pred, torch.ones_like(hr_pred))
-            loss.backward()
-            self.optim_discriminator.step()
-
-            if step % self.config.training.log_iter == 0:
-                self.writer.add_scalar("Pretrain/Discriminator/Loss", loss.item(), global_step=step)
 
         torch.save(
             {"model": self.generator.state_dict(), "optimizer": self.optim_generator.state_dict()},
