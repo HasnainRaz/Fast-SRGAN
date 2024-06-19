@@ -45,7 +45,7 @@ You can also change the config parameters from the command line. The following w
 python train.py data.image_dir="/path/to/image/dataset" training.batch_size=32 generator.n_layers=12
 
 ```
-This is povered by `hydra`, which means all the parameters in the config are editable via the CLI.
+This is powered by `hydra`, which means all the parameters in the config are editable via the CLI.
 
 Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the `outputs` directory that will be created when you start training.
 
@@ -53,7 +53,7 @@ Model checkpoints and training summaries are saved in tensorboard. To monitor tr
 Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image.
 
 <p align="center">
-  <b>The following show images upsampled 4x by bicubic interpolation, the model and the original high resolution sample</b>
+  <b>The following shows images upsampled 4x by bicubic interpolation, the pretrained model from this repository and the original high resolution image as a comparison</b>
   <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/95b6f8e4-f6c0-403b-854e-78c5589fbec6g"> 
   <img src="hhttps://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/62aa7465-0f4e-4fc0-8e84-ee4ac9ac267">
   <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/67472974-56a5-4505-abaa-5e1c86467da1">
