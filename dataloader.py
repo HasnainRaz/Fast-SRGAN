@@ -24,8 +24,12 @@ class NumpyImagesDataset(Dataset):
     def __getitem__(self, idx):
         image = np.load(self.numpy_paths[idx], mmap_mode="c")
         _, h, w = image.shape
-        crop_h, crop_w = random.randint(0, h - self.hr_image_size), random.randint(0, w - self.hr_image_size)
-        hr_image = image[:, crop_h : crop_h + self.hr_image_size, crop_w : crop_w + self.hr_image_size]
+        crop_h, crop_w = random.randint(0, h - self.hr_image_size), random.randint(
+            0, w - self.hr_image_size
+        )
+        hr_image = image[
+            :, crop_h : crop_h + self.hr_image_size, crop_w : crop_w + self.hr_image_size
+        ]
         hr_image = torch.tensor(hr_image, dtype=torch.float32)
         lr_image = self.resize(hr_image)
 

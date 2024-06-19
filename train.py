@@ -47,7 +47,11 @@ def seed_worker(_):
 def main(config):
     if not os.path.exists(config.data.numpy_dir):
         write_images_to_numpy_arrays(
-            [os.path.join(config.data.image_dir, x) for x in os.listdir(config.data.image_dir) if x.endswith(".png")],
+            [
+                os.path.join(config.data.image_dir, x)
+                for x in os.listdir(config.data.image_dir)
+                if x.endswith(".png")
+            ],
             config.data.numpy_dir,
         )
     g = torch.Generator()
@@ -55,9 +59,13 @@ def main(config):
     seed(config.experiment.seed)
 
     numpy_files = [
-        os.path.join(config.data.numpy_dir, x) for x in os.listdir(config.data.numpy_dir) if x.endswith(".npy")
+        os.path.join(config.data.numpy_dir, x)
+        for x in os.listdir(config.data.numpy_dir)
+        if x.endswith(".npy")
     ]
-    train_dataset = NumpyImagesDataset(numpy_files, config.data.lr_image_size, config.data.scale_factor)
+    train_dataset = NumpyImagesDataset(
+        numpy_files, config.data.lr_image_size, config.data.scale_factor
+    )
     pretrain_sampler = RandomSampler(
         train_dataset,
         replacement=True,

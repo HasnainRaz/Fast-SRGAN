@@ -8,7 +8,7 @@ data:
   scale_factor: 4
 generator:
   n_filters: 64
-  n_layers: 12
+  n_layers: 8 
 discriminator:
   n_filters: 64
   n_layers: 7
