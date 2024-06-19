@@ -55,7 +55,7 @@ Following are some results from the provided trained model. Left shows the low r
 <p align="center">
   <b>The following shows images upsampled 4x by bicubic interpolation, the pretrained model from this repository and the original high resolution image as a comparison</b>
   <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/95b6f8e4-f6c0-403b-854e-78c5589fbec6g"> 
-  <img src="hhttps://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/62aa7465-0f4e-4fc0-8e84-ee4ac9ac267">
+  <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/62aa7465-0f4e-4fc0-8e84-ee4ac9ac267">
   <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/67472974-56a5-4505-abaa-5e1c86467da1">
   <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/0d16647e-75ea-4150-bba0-2ea70ba05ca0">
 </p>
