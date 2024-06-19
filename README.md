@@ -45,7 +45,7 @@ You can also change the config parameters from the command line. The following w
 python train.py data.image_dir="/path/to/image/dataset" training.batch_size=32 generator.n_layers=12
 
 ```
-This is povered by hydra, which means all the parameters in the config are editable via the CLI:
+This is povered by `hydra`, which means all the parameters in the config are editable via the CLI.
 
 Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the `outputs` directory that will be created when you start training.
 
