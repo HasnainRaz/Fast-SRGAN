@@ -53,12 +53,11 @@ Model checkpoints and training summaries are saved in tensorboard. To monitor tr
 Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image.
 
 <p align="center">
-  <b>384x384 to 1536x1536 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67642055-4f7a9900-f908-11e9-93d7-5efc902bd81c.png"> 
-  <b>256x256 to 1024x1024 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67642086-8fda1700-f908-11e9-8428-8a69ea86dedb.png">
-  <b>128x128 to 512x512 Upsampling</b>
-  <img src="https://user-images.githubusercontent.com/4294680/67641979-5ead1700-f907-11e9-866c-b72d2e1dec8a.png">
+  <b>The following show images upsampled 4x by bicubic interpolation, the model and the original high resolution sample</b>
+  <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/95b6f8e4-f6c0-403b-854e-78c5589fbec6g"> 
+  <img src="hhttps://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/62aa7465-0f4e-4fc0-8e84-ee4ac9ac267">
+  <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/67472974-56a5-4505-abaa-5e1c86467da1">
+  <img src="https://github.com/HasnainRaz/Fast-SRGAN/assets/4294680/0d16647e-75ea-4150-bba0-2ea70ba05ca0">
 </p>
 
 # Contributing
