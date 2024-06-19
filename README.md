@@ -40,14 +40,14 @@ To train, simply edit the config file in the folder `configs/config.yaml` with y
 python train.py
 ```
 
-You can also change the config parameters from the command line. The following will run training with a `batch_size` of 32, a generator with 12 residual blocks, and a path to the image directory `/path/to/image/dataset`
+You can also change the config parameters from the command line. The following will run training with a `batch_size` of 32, a generator with 12 residual blocks, and a path to the image directory `/path/to/image/dataset`.
 ```
 python train.py data.image_dir="/path/to/image/dataset" training.batch_size=32 generator.n_layers=12
 
 ```
+This is povered by hydra, which means all the parameters in the config are editable via the CLI:
 
-
-Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the `outputs` directory that will created when you start training.
+Model checkpoints and training summaries are saved in tensorboard. To monitor training progress, open up tensorboard by pointing it to the `outputs` directory that will be created when you start training.
 
 # Samples
 Following are some results from the provided trained model. Left shows the low res image, after 4x bicubic upsampling. Middle is the output of the model. Right is the actual high resolution image.
