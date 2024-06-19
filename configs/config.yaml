@@ -1,0 +1,26 @@
+experiment:
+  name: "SRGAN"
+  seed: 1234
+data:
+  image_dir: "/Users/hasnain.raza/Datasets/DIV2K"
+  numpy_dir: "/Users/hasnain.raza/Datasets/div2k_np"
+  lr_image_size: 24 
+  scale_factor: 4
+generator:
+  n_filters: 64
+  n_layers: 8 
+discriminator:
+  n_filters: 64
+  n_layers: 7
+training:
+  compiled: false
+  pretrain_iterations: 100 
+  iterations: 100
+  device: mps
+  log_iter: 5000
+  checkpoint_iter: 5000
+  batch_size: 24
+  num_workers: 16
+  generator_lr: 1e-4
+  discriminator_lr: 1e-4
+
