@@ -1,26 +1,19 @@
 import torch
-from torchvision.models.vgg import VGG19_Weights, vgg19
+import segmentation_models_pytorch as smp
 
 
-class VGG19(torch.nn.Module):
-    def __init__(self):
+class UnetFeatureExtractor(torch.nn.Module):
+
+    def __init__(self, config):
         super().__init__()
-        self.vgg = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features[:34]
-        for param in self.vgg.parameters():
-            param.requires_grad = False
-        self.register_buffer(
-            "mean",
-            torch.tensor([0.485, 0.456, 0.406], requires_grad=False).view(1, 3, 1, 1),
-        )
-        self.register_buffer(
-            "std",
-            torch.tensor([0.229, 0.224, 0.225], requires_grad=False).view(1, 3, 1, 1),
-        )
+        self.net = smp.Unet(config.backbone_name, encoder_weights=config.encoder_weights, decoder_channels=config.decoder_channels)
+        self.logits = torch.nn.Conv2d(config.decoder_channels[-1], 3, kernel_size=1, stride=1, bias=False)
+
 
     def forward(self, x):
-        x = (x + 1.0) / 2.0
-        x = (x - self.mean) / self.std
-        return self.vgg(x)
+        features = self.net.decoder(*self.net.encoder(x))
+        logits = torch.tanh(self.logits(features))
+        return features, logits
 
 
 class UpSamplingBlock(torch.nn.Module):
@@ -117,77 +110,12 @@ class Generator(torch.nn.Module):
         return self.head(x)
 
 
-class SimpleBlock(torch.nn.Module):
+class UnetDiscriminator(torch.nn.Module):
 
-    def __init__(self, in_channels, out_channels, stride):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            padding=1,
-            stride=stride,
-            bias=False,
-        )
-        self.bn = torch.nn.InstanceNorm2d(out_channels)
-        self.act = torch.nn.LeakyReLU()
-
-    def forward(self, x):
-        return self.act(self.bn(self.conv(x)))
-
-
-class Discriminator(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.config = config
-        self.neck = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1),
-            torch.nn.LeakyReLU(negative_slope=0.2),
-        )
-
-        layers = [
-            SimpleBlock(
-                in_channels=config.n_filters,
-                out_channels=config.n_filters,
-                stride=2,
-            ),
-            SimpleBlock(
-                in_channels=config.n_filters,
-                out_channels=config.n_filters * 2,
-                stride=1,
-            ),
-            SimpleBlock(
-                in_channels=config.n_filters * 2,
-                out_channels=config.n_filters * 2,
-                stride=2,
-            ),
-            SimpleBlock(
-                in_channels=config.n_filters * 2,
-                out_channels=config.n_filters * 4,
-                stride=1,
-            ),
-            SimpleBlock(
-                in_channels=config.n_filters * 4,
-                out_channels=config.n_filters * 4,
-                stride=2,
-            ),
-            SimpleBlock(
-                in_channels=config.n_filters * 4,
-                out_channels=config.n_filters * 8,
-                stride=1,
-            ),
-            SimpleBlock(
-                in_channels=config.n_filters * 8,
-                out_channels=config.n_filters * 8,
-                stride=2,
-            ),
-            torch.nn.Conv2d(
-                in_channels=config.n_filters * 8, out_channels=1, kernel_size=1, padding=0, stride=1
-            ),
-        ]
-
-        self.stem = torch.nn.Sequential(*layers)
+        self.net = smp.Unet(config.backbone_name, encoder_weights=config.encoder_weights, classes=3)
 
     def forward(self, x):
-        x = self.neck(x)
-        return self.stem(x)
+        return self.net(x)
+

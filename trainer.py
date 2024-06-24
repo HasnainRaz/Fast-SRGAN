@@ -5,7 +5,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from torchmetrics.image import PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
 from tqdm import tqdm
 
-from model import VGG19, Discriminator, Generator
+from model import Generator, UnetFeatureExtractor, UnetDiscriminator
 
 
 class Trainer:
@@ -17,26 +17,22 @@ class Trainer:
         self.writer = SummaryWriter(log_dir=osp.join("runs", config.experiment.name))
         self.generator = Generator(config=config.generator)
         self.generator.to(self.config.training.device)
-        self.discriminator = Discriminator(config=config.discriminator)
+        self.discriminator = UnetDiscriminator(config=config.discriminator)
         self.discriminator.to(self.config.training.device)
-        self.perceptual_network = VGG19().to(self.config.training.device)
+        self.perceptual_network = UnetFeatureExtractor(config.feature_extractor)
+        self.perceptual_network = self.perceptual_network.to(self.config.training.device)
         if config.training.compiled and torch.cuda.is_available():
             self.generator = torch.compile(self.generator, mode="max-autotune")
             self.discriminator = torch.compile(self.discriminator, mode="max-autotune")
             self.perceptual_network = torch.compile(self.perceptual_network, mode="max-autotune")
 
-        # The VGG just provides features, no gradient needed
-        self.perceptual_network.eval()
-        for p in self.perceptual_network.parameters():
-            p.requires_grad = False
-
         self.optim_generator = torch.optim.AdamW(
-            self.generator.parameters(), lr=self.config.training.generator_lr, fused=True
+            self.generator.parameters(), lr=self.config.training.generator_lr, fused=True if self.config.training.device not in ("cpu", "mps") else False
         )
         self.optim_discriminator = torch.optim.AdamW(
-            self.discriminator.parameters(), lr=self.config.training.discriminator_lr, fused=True
+            self.discriminator.parameters(), lr=self.config.training.discriminator_lr, fused=True if self.config.training.device not in ("cpu", "mps") else False
         )
-
+        self.optim_feature_extractor = torch.optim.AdamW(self.perceptual_network.parameters(), lr=self.config.training.feature_extractor_lr, fused=True if self.config.training.device not in ("cpu", "mps") else False)
         # Loss function for the adversarial players
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
         # Loss function for the content loss
@@ -83,7 +79,6 @@ class Trainer:
             for fixed_lr_images, fixed_hr_images in dataloader:
                 cls.fixed_lr_images = (fixed_lr_images + 1.0) / 2.0
                 cls.fixed_hr_images = (fixed_hr_images + 1.0) / 2.0
-                cls.images_are_set = True
                 break
 
     def pretrain(self, train_dataloader, val_dataloader):
@@ -95,6 +90,9 @@ class Trainer:
         self._calculate_metrics_over_dataset(val_dataloader, "Pretrain", step=0)
         self._pre_train_setup(val_dataloader)
         self._log_fixed_images("Pretrain")
+        self.generator.train()
+        self.discriminator.train()
+        self.perceptual_network.train()
         step = 0
         for step, (lr_images, hr_images) in tqdm(
             enumerate(train_dataloader, start=1),
@@ -119,6 +117,12 @@ class Trainer:
             disc_loss.backward()
             self.optim_discriminator.step()
 
+            self.optim_feature_extractor.zero_grad(set_to_none=True)
+            _, reconstructed_hr_image = self.perceptual_network(hr_images)
+            feature_extractor_loss = self.l1_loss(reconstructed_hr_image, hr_images)
+            feature_extractor_loss.backward()
+            self.optim_feature_extractor.step()
+
             if step % self.config.training.log_iter == 0:
                 self.writer.add_scalar(
                     "Pretrain/Discriminator/Loss", disc_loss.item(), global_step=step
@@ -128,13 +132,24 @@ class Trainer:
                     gen_loss,
                     global_step=step,
                 )
+                self.writer.add_scalar(
+                    "Pretrain/FeatureExtractor/Loss",
+                    feature_extractor_loss,
+                    global_step=step
+                )
             if step % self.config.training.checkpoint_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
                     fake_hr_images = (1.0 + self.generator(2.0 * self.fixed_lr_images - 1.0)) / 2.0
+                    reconstructed_images = (1.0 + self.perceptual_network(2.0 * self.fixed_hr_images - 1.0)[1]) / 2.0
                 self.writer.add_images(
                     "Pretrain/Generated",
                     fake_hr_images,
+                    global_step=step,
+                )
+                self.writer.add_images(
+                    "Pretrain/FeatureExtractor",
+                    reconstructed_images,
                     global_step=step,
                 )
                 self._calculate_metrics_over_dataset(val_dataloader, "Pretrain", step)
@@ -172,6 +187,9 @@ class Trainer:
         if Trainer.fixed_lr_images is None:
             self._pre_train_setup(train_dataloader)
             self._log_fixed_images("GAN")
+        for p in self.perceptual_network.parameters():
+            p.requires_grad = False
+        self.perceptual_network.eval()
         self.generator.train()
         self.discriminator.train()
         for step, (lr_images, hr_images) in tqdm(
@@ -199,9 +217,10 @@ class Trainer:
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
             adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
             # Get the content loss for the generator
-            fake_features = self.perceptual_network(sr_images)
-            real_features = self.perceptual_network(hr_images)
+            fake_features, _ = self.perceptual_network(sr_images)
+            real_features, _ = self.perceptual_network(hr_images)
             content_loss = self.l1_loss(fake_features, real_features)
+
             # Train the generator
             generator_loss = 0.5 * adv_loss + 0.5 * content_loss
             generator_loss.backward()

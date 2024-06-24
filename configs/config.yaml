@@ -10,8 +10,17 @@ generator:
   n_filters: 64
   n_layers: 8 
 discriminator:
-  n_filters: 64
-  n_layers: 7
+  backbone_name: "vgg19"
+  encoder_weights: "imagenet"
+feature_extractor:
+  backbone_name: "vgg19"
+  encoder_weights: "imagenet"
+  decoder_channels:
+    - 256
+    - 256
+    - 256
+    - 256
+    - 256
 training:
   compiled: false
   pretrain_iterations: 100 
@@ -23,4 +32,5 @@ training:
   num_workers: 16
   generator_lr: 1e-4
   discriminator_lr: 1e-4
+  feature_extractor_lr: 1e-4
 
