@@ -110,19 +110,7 @@ class Trainer:
             gen_loss.backward()
             self.optim_generator.step()
 
-            self.optim_discriminator.zero_grad(set_to_none=True)
-            sr_pred = self.discriminator(fake_hr_images.detach())
-            hr_pred = self.discriminator(hr_images)
-            disc_loss = 0.5 * self.loss_fn(sr_pred, torch.zeros_like(sr_pred)) + 0.5 * self.loss_fn(
-                hr_pred, torch.ones_like(hr_pred)
-            )
-            disc_loss.backward()
-            self.optim_discriminator.step()
-
             if step % self.config.training.log_iter == 0:
-                self.writer.add_scalar(
-                    "Pretrain/Discriminator/Loss", disc_loss.item(), global_step=step
-                )
                 self.writer.add_scalar(
                     "Pretrain/Generator/Loss",
                     gen_loss,
