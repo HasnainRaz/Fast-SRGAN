@@ -226,7 +226,7 @@ class Trainer:
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
-            adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
+            adv_loss = self.loss_fn(y_fake, real_labels.to(self.config.training.device))
 
             # Get the content loss for the generator
             fake_features, _ = self.perceptual_network(sr_images)
