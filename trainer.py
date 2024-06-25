@@ -27,12 +27,20 @@ class Trainer:
             self.perceptual_network = torch.compile(self.perceptual_network, mode="max-autotune")
 
         self.optim_generator = torch.optim.AdamW(
-            self.generator.parameters(), lr=self.config.training.generator_lr, fused=True if self.config.training.device not in ("cpu", "mps") else False
+            self.generator.parameters(),
+            lr=self.config.training.generator_lr,
+            fused=True if self.config.training.device not in ("cpu", "mps") else False,
         )
         self.optim_discriminator = torch.optim.AdamW(
-            self.discriminator.parameters(), lr=self.config.training.discriminator_lr, fused=True if self.config.training.device not in ("cpu", "mps") else False
+            self.discriminator.parameters(),
+            lr=self.config.training.discriminator_lr,
+            fused=True if self.config.training.device not in ("cpu", "mps") else False,
         )
-        self.optim_feature_extractor = torch.optim.AdamW(self.perceptual_network.parameters(), lr=self.config.training.feature_extractor_lr, fused=True if self.config.training.device not in ("cpu", "mps") else False)
+        self.optim_feature_extractor = torch.optim.AdamW(
+            self.perceptual_network.parameters(),
+            lr=self.config.training.feature_extractor_lr,
+            fused=True if self.config.training.device not in ("cpu", "mps") else False,
+        )
         # Loss function for the adversarial players
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
         # Loss function for the content loss
@@ -102,6 +110,7 @@ class Trainer:
             lr_images, hr_images = lr_images.to(
                 self.config.training.device, non_blocking=True
             ), hr_images.to(self.config.training.device, non_blocking=True)
+
             self.optim_generator.zero_grad(set_to_none=True)
             fake_hr_images = self.generator(lr_images)
             gen_loss = self.l1_loss(fake_hr_images, hr_images)
@@ -109,7 +118,8 @@ class Trainer:
             self.optim_generator.step()
 
             self.optim_discriminator.zero_grad(set_to_none=True)
-            sr_pred = self.discriminator(fake_hr_images.detach())
+            sr_images = self.generator(lr_images).detach()
+            sr_pred = self.discriminator(sr_images)
             hr_pred = self.discriminator(hr_images)
             disc_loss = 0.5 * self.loss_fn(sr_pred, torch.zeros_like(sr_pred)) + 0.5 * self.loss_fn(
                 hr_pred, torch.ones_like(hr_pred)
@@ -124,24 +134,22 @@ class Trainer:
             self.optim_feature_extractor.step()
 
             if step % self.config.training.log_iter == 0:
-                self.writer.add_scalar(
-                    "Pretrain/Discriminator/Loss", disc_loss.item(), global_step=step
-                )
+                self.writer.add_scalar("Pretrain/Discriminator/Loss", disc_loss, global_step=step)
                 self.writer.add_scalar(
                     "Pretrain/Generator/Loss",
                     gen_loss,
                     global_step=step,
                 )
                 self.writer.add_scalar(
-                    "Pretrain/FeatureExtractor/Loss",
-                    feature_extractor_loss,
-                    global_step=step
+                    "Pretrain/FeatureExtractor/Loss", feature_extractor_loss, global_step=step
                 )
             if step % self.config.training.checkpoint_iter == 0:
                 self.generator.eval()
                 with torch.no_grad():
                     fake_hr_images = (1.0 + self.generator(2.0 * self.fixed_lr_images - 1.0)) / 2.0
-                    reconstructed_images = (1.0 + self.perceptual_network(2.0 * self.fixed_hr_images - 1.0)[1]) / 2.0
+                    reconstructed_images = (
+                        1.0 + self.perceptual_network(2.0 * self.fixed_hr_images - 1.0)[1]
+                    ) / 2.0
                 self.writer.add_images(
                     "Pretrain/Generated",
                     fake_hr_images,
@@ -187,8 +195,10 @@ class Trainer:
         if Trainer.fixed_lr_images is None:
             self._pre_train_setup(train_dataloader)
             self._log_fixed_images("GAN")
+
         for p in self.perceptual_network.parameters():
             p.requires_grad = False
+
         self.perceptual_network.eval()
         self.generator.train()
         self.discriminator.train()
@@ -198,11 +208,12 @@ class Trainer:
             lr_images, hr_images = lr_images.to(
                 self.config.training.device, non_blocking=True
             ), hr_images.to(self.config.training.device, non_blocking=True)
+
             self.optim_discriminator.zero_grad(set_to_none=True)
-            y_real = self.discriminator(hr_images)
             sr_images = self.generator(lr_images).detach()
+            y_real = self.discriminator(hr_images)
             y_fake = self.discriminator(sr_images)
-            real_labels = 0.3 * torch.rand_like(y_real) + 0.8
+            real_labels = 0.3 * torch.rand_like(y_real) + 0.7
             fake_labels = 0.3 * torch.rand_like(y_fake)
             loss_real = self.loss_fn(y_real, real_labels.to(self.config.training.device))
             loss_fake = self.loss_fn(y_fake, fake_labels.to(self.config.training.device))
@@ -216,6 +227,7 @@ class Trainer:
             y_fake = self.discriminator(sr_images)
             real_labels = 0.3 * torch.rand_like(y_fake) + 0.7
             adv_loss = 1e-1 * self.loss_fn(y_fake, real_labels.to(self.config.training.device))
+
             # Get the content loss for the generator
             fake_features, _ = self.perceptual_network(sr_images)
             real_features, _ = self.perceptual_network(hr_images)
