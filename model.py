@@ -6,14 +6,9 @@ class UnetFeatureExtractor(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.net = smp.Unet(
-            config.backbone_name,
-            encoder_weights=config.encoder_weights,
-            decoder_channels=config.decoder_channels,
-        )
-        self.logits = torch.nn.Conv2d(
-            config.decoder_channels[-1], 3, kernel_size=1, stride=1, bias=False
-        )
+        self.net = smp.Unet(config.backbone_name, encoder_weights=config.encoder_weights, decoder_channels=config.decoder_channels)
+        self.logits = torch.nn.Conv2d(config.decoder_channels[-1], 3, kernel_size=1, stride=1, bias=False)
+
 
     def forward(self, x):
         features = self.net.decoder(*self.net.encoder(x))
@@ -123,3 +118,4 @@ class UnetDiscriminator(torch.nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
