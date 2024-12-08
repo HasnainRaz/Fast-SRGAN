@@ -98,7 +98,9 @@ class Trainer:
         self.writer.add_images(f"{phase}/Bicubic", upsampled_images, global_step=0)
 
     def calc_grad_penalty(self, d_out, real_images):
-        grad_real = torch.autograd.grad(outputs=d_out.sum(), inputs=real_images)[0]
+        grad_real = torch.autograd.grad(
+            outputs=d_out.sum(), inputs=real_images, create_graph=True
+        )[0]
         return grad_real.pow(2).view(grad_real.shape[0], -1).sum(1).mean()
 
     @classmethod
@@ -224,7 +226,7 @@ class Trainer:
             self.optim_generator.zero_grad(set_to_none=True)
             sr_images = self.generator(lr_images)
             y_fake = self.discriminator(sr_images)
-            adv_loss = torch.nn.functional.softplus(-y_fake)
+            adv_loss = torch.nn.functional.softplus(-y_fake).mean()
             # Get the content loss for the generator
             fake_features = self.perceptual_network(sr_images)
             real_features = self.perceptual_network(hr_images)
