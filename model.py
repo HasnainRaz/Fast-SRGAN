@@ -24,7 +24,6 @@ class VGG19(torch.nn.Module):
 
 
 class UpSamplingBlock(torch.nn.Module):
-
     def __init__(self, config):
         super().__init__()
         self.conv = torch.nn.Conv2d(
@@ -41,7 +40,6 @@ class UpSamplingBlock(torch.nn.Module):
 
 
 class ResidualBlock(torch.nn.Module):
-
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(
@@ -73,12 +71,16 @@ class Generator(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.neck = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1),
+            torch.nn.Conv2d(
+                in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1
+            ),
             torch.nn.PReLU(),
         )
         self.stem = torch.nn.Sequential(
             *[
-                ResidualBlock(in_channels=config.n_filters, out_channels=config.n_filters)
+                ResidualBlock(
+                    in_channels=config.n_filters, out_channels=config.n_filters
+                )
                 for _ in range(config.n_layers)
             ]
         )
@@ -118,7 +120,6 @@ class Generator(torch.nn.Module):
 
 
 class SimpleBlock(torch.nn.Module):
-
     def __init__(self, in_channels, out_channels, stride):
         super().__init__()
         self.conv = torch.nn.Conv2d(
@@ -141,7 +142,9 @@ class Discriminator(torch.nn.Module):
         super().__init__()
         self.config = config
         self.neck = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1),
+            torch.nn.Conv2d(
+                in_channels=3, out_channels=config.n_filters, kernel_size=3, padding=1
+            ),
             torch.nn.LeakyReLU(negative_slope=0.2),
         )
 
@@ -182,7 +185,11 @@ class Discriminator(torch.nn.Module):
                 stride=2,
             ),
             torch.nn.Conv2d(
-                in_channels=config.n_filters * 8, out_channels=1, kernel_size=1, padding=0, stride=1
+                in_channels=config.n_filters * 8,
+                out_channels=1,
+                kernel_size=1,
+                padding=0,
+                stride=1,
             ),
         ]
 

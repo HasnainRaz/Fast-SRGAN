@@ -54,9 +54,10 @@ def main():
             sr_image = (sr_image + 1.0) / 2.0
             sr_image = sr_image.permute(0, 2, 3, 1).squeeze()
             sr_image = (sr_image * 255).numpy().astype(np.uint8)
-        Image.fromarray(sr_image).save(os.path.join(args.output_dir, os.path.basename(image_path)))
+        Image.fromarray(sr_image).save(
+            os.path.join(args.output_dir, os.path.basename(image_path))
+        )
 
 
 if __name__ == "__main__":
     main()
-
