@@ -101,7 +101,10 @@ class Trainer:
         grad_real = torch.autograd.grad(
             outputs=d_out.sum(), inputs=real_images, create_graph=True
         )[0]
-        return grad_real.pow(2).view(grad_real.shape[0], -1).sum(1).mean()
+        grad_penalty = (
+            grad_real.view(grad_real.size(0), -1).norm(2, dim=1) ** 2
+        ).mean()
+        return grad_penalty
 
     @classmethod
     def _pre_train_setup(cls, dataloader):
